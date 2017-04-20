@@ -7,5 +7,5 @@ public interface StepCallBack {
     /**
      * 计步回调
      */
-    public void Step(int stepNum);
+    void Step(int stepNum);
 }

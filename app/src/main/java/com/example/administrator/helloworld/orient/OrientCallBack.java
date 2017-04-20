@@ -8,5 +8,5 @@ public interface  OrientCallBack {
     /**
      * 方向回调
      */
-    public void Orient(float orient);
+    void Orient(float orient);
 }

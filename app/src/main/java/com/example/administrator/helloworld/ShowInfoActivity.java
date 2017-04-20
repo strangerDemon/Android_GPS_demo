@@ -16,19 +16,14 @@ import android.provider.Settings;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
-import android.widget.Toast;
+import com.example.administrator.helloworld.location.LocationCallBack;
+import com.example.administrator.helloworld.location.LocationSensor;
 import com.example.administrator.helloworld.orient.OrientSensor;
-import com.example.administrator.helloworld.step.StepCallBack;
+import com.example.administrator.helloworld.step.*;
 import com.example.administrator.helloworld.orient.OrientCallBack;
-import com.example.administrator.helloworld.step.StepSensorAcceleration;
-import com.example.administrator.helloworld.step.StepSensorBase;
-import com.example.administrator.helloworld.step.StepSensorPedometer;
 import com.example.administrator.helloworld.util.MySocket;
 import com.example.administrator.helloworld.util.SensorUtil;
 
-import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Random;
@@ -36,13 +31,11 @@ import java.util.Random;
 /**
  * Created by Administrator on 2017/4/12.
  */
-public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack  {
+public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack ,LocationCallBack {
     //ui 组件
     public TextView showinfo;
     //gsp定位服务
     LocationManager location;
-    //记步服务
-    //SensorManager mSensorManager;
     //线程
     static beginThread thread;
     //循环
@@ -63,9 +56,11 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     //计步器
     private TextView step;
     private TextView orient;
+    private TextView locationview;
 
     private StepSensorBase stepSensor; // 计步传感器
     private OrientSensor orientSensor; // 方向传感器
+    private LocationSensor locationSensor;//定位
 
     //关闭线程
     @Override
@@ -75,6 +70,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         showinfo= (TextView)findViewById(R.id.showinfo);
         step = (TextView) findViewById(R.id.step);
         orient = (TextView) findViewById(R.id.orient);
+        locationview=(TextView)findViewById(R.id.location);
+        initShow();
         showInterstitial();
         progress();
     }
@@ -155,7 +152,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             Looper.prepare();//相当于该线程Looper的初始化
             try {
                 while(threadLoop) {
-                    getSensor();
                     getGPS();//获取gps信息
                     synchronized (this) {
                         while (suspendFlag||(!isConn("judge")||!isGPSOpen("judge")||!isPermission("judge"))) {
@@ -196,20 +192,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             thread.interrupt();
             thread = null;
         }
-        /*if(socket!=null){
-            try {
-                socket.close();
-                socket=null;
-            }catch(Exception e){
-
-            }
-        }*/
-        /*if(threadLoop){
-            threadLoop=false;
-        }*/
-        /*if(suspendFlag){//待机状态
-            suspendFlag=true;
-        }*/
     }
 
     /**
@@ -217,7 +199,13 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      */
     private void getGPS() {
         //创建连接 防止 运行一半的时候 服务器挂了，用户关掉数据
-        createSocket();
+        if(netOpenDialog) {
+            isConn("dialog");
+            netOpenDialog=false;
+        }
+        if(socket==null) {
+            socket = new MySocket();//
+        }
         //系统服务
         location = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
@@ -231,49 +219,22 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             if (Build.VERSION.SDK_INT >= 23) { //CONTROLLO PER ANDROID 6.0 O SUPERIORE
                 isPermission("dialog");
             } else {//android 6.0 以下
-                location.isProviderEnabled(LocationManager.GPS_PROVIDER);
-                location.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             }
-        } catch (Exception ex) {
-            ex.toString();
-        }
+        } catch (Exception ex) {}
         location.removeUpdates(onLocationChanged);
         if (location.isProviderEnabled(LocationManager.GPS_PROVIDER) && location.getLastKnownLocation(LocationManager.GPS_PROVIDER) != null) {
             updateTextView("GPS_PROVIDER", location.getLastKnownLocation(LocationManager.GPS_PROVIDER));
             getSendData(location.getLastKnownLocation(LocationManager.GPS_PROVIDER));
-            //LocationManager.GPS_PROVIDER 定位服务提供者
-            //最小时间 单位 毫秒
-            //最小距离 单位 米
-            //location.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000, 2, onLocationChanged);
         } else if (location.isProviderEnabled(LocationManager.NETWORK_PROVIDER) && location.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) != null) {
             updateTextView("NETWORK_PROVIDER", location.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
             getSendData(location.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
-            //location.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000, 2, onLocationChanged);
         } else {
             updateTextView("PASSIVE_PROVIDER", location.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
             getSendData(location.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
-            //location.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 2000, 2, onLocationChanged);
         }
         try {
             beginThread.sleep(2000);
-        } catch (Exception ex) {
-
-        }
-    }
-
-    /**
-     * 获取初始化计步器
-     */
-    public void getSensor(){
-        StringBuffer stringBuffer=new StringBuffer();
-
-        Message message=new Message();
-        Bundle bundle=new Bundle();
-        bundle.putString("step",stringBuffer.toString());
-        message.setData(bundle);
-        message.what=1;
-        handler.sendMessage(message);
-
+        } catch (Exception ex) {}
     }
     /**
      * 外部定义定位监测器
@@ -281,9 +242,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     LocationListener onLocationChanged= new LocationListener() {
         //当定位服务信息改变时
         @Override
-        public void onLocationChanged(Location location1) {
-            updateTextView(location1.getProvider(),location1);
-            getSendData(location1);
+        public void onLocationChanged(Location location) {
         }
         //状态改变时
         @Override
@@ -293,14 +252,10 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         //gsp locationProvider 可用时
         @Override
         public void onProviderEnabled(String provider) {
-            updateTextView(provider,location.getLastKnownLocation(provider));
-            getSendData(location.getLastKnownLocation(provider));
         }
         //gsp locationProvider 不可用时
         @Override
         public void onProviderDisabled(String provider) {
-            updateTextView(provider,null);
-            getSendData(null);
         }
     };
 
@@ -321,8 +276,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             sb.append("location方向："+location.getBearing()+"\n");//方向
             sb.append("定位精度："+location.getAccuracy()+"\n");//定位精度
             sb.append("时间："+timedate(location.getTime()+"")+"\n");//时间
-            sb.append("步数："+count+"\n");//定位精度
-            sb.append("orient方向："+orientNum+"\n");//时间
+            sb.append("步数："+count+"\n");//步数
+            sb.append("orient方向："+orientNum+"\n");//orient方向
         }else{
             sb.append("数据为空");
         }
@@ -332,11 +287,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         bundle.putString("showinfo",sb.toString());
         message.setData(bundle);
         message.what=1;
-        try {
-            handler.sendMessage(message);
-        }catch(Exception ex){
-           updateTextView(ex.toString(),null);
-        }
+        handler.sendMessage(message);
     }
 
     /**
@@ -360,68 +311,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             lastSend.append("|"+68);//步幅
         }else{
         }
-        Send(lastSend.toString());
+        socket.writeData(lastSend.toString());
     }
-
-    /**
-     * 创建socket网络连接
-     */
-    private void createSocket(){
-        //1.创建客户端Socket，指定服务器地址和端口
-        try {
-            if(netOpenDialog) {
-                isConn("dialog");
-                netOpenDialog=false;
-            }
-            if(socket==null) {
-                socket = new MySocket();//
-            }
-        }catch(Exception ex){
-            Message message=new Message();
-            Bundle bundle=new Bundle();
-            bundle.putString("type","socket");
-            message.setData(bundle);
-            message.what=2;
-            handler.sendMessage(message);
-            suspend();
-        }
-    }
-
-    /**
-     * 关闭socket连接
-     */
-    private void closeSocket(){
-        try {
-            socket.closeSocket();
-        }catch(Exception ex){
-            showinfo.setText("连接关闭失败："+ex.toString());
-        }
-    }
-
-    /**
-     * 发送数据
-     * @param data
-     */
-    private void Send(String data){
-        try {
-            //2.获取输出流，向服务器端发送信息
-           /* OutputStream os = socket.getOutputStream();//字节输出流
-            PrintWriter pw = new PrintWriter(os);//将输出流包装为打印流
-            pw.write(data);
-            pw.flush();*/
-           socket.writeData(data);
-            //socket.shutdownOutput();//关闭输出流
-        }catch(Exception ex){
-            //showinfo.setText("传输数据失败："+ex.toString());
-            Message message=new Message();
-            Bundle bundle=new Bundle();
-            bundle.putString("showinfo","传输数据失败："+ex.toString());
-            message.setData(bundle);
-            message.what=1;
-            handler.sendMessage(message);
-        }
-    }
-
     /**
      * 时间格式转换
      * @param time
@@ -639,39 +530,47 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         if (!stepSensor.registerStep()) {
             stepSensor = new StepSensorAcceleration(this, this);
             if (!stepSensor.registerStep()) {
-                Toast.makeText(this, "加速度传感器不可用！", Toast.LENGTH_SHORT).show();
+                step.setText("加速度传感器不可用！");
             }
         }
 
         // 开启方向监听
         orientSensor = new OrientSensor(this, this);
         if (!orientSensor.registerOrient()) {
-            Toast.makeText(this, "方向传感器不可用！", Toast.LENGTH_SHORT).show();
+            orient.setText("方向传感器不可用！");
         }
+
+        locationSensor=new LocationSensor(this,this);
     }
     @Override
     public void Step(int stepNum) {
         //  计步回调
         step.setText("步数:" + stepNum);
         count=stepNum;
-        //stepSurfaceView.autoAddPoint(0, 30);
     }
-
-
     @Override
     public void Orient(float o) {
         // 方向回调
         orient.setText("方向:" + (int) o);
         orientNum=(int)o;
     }
-
-
+    @Override
+    public void Location(Location local) {
+       locationview.setText("坐标："+local.getLatitude()+","+local.getLongitude());
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
         // 注销传感器监听
         stepSensor.unregisterStep();
         orientSensor.unregisterOrient();
+    }
+
+    /**
+     * 退出后再进来
+     */
+    private void initShow(){
+        step.setText("步数:" + count);
     }
 
 }

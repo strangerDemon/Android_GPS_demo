@@ -1,6 +1,10 @@
 package com.example.administrator.helloworld.util;
 
 
+import android.os.Bundle;
+import android.os.Message;
+import com.example.administrator.helloworld.ShowInfoActivity;
+
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -93,7 +97,11 @@ public class MySocket {
             pw.write(data);
             pw.flush();
         }catch (Exception ex){
-
+            Message message=new Message();
+            Bundle bundle=new Bundle();
+            bundle.putString("showinfo","传输数据失败："+ex.toString());
+            message.setData(bundle);
+            message.what=1;
         }
     }
 

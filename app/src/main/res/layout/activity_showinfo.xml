@@ -6,29 +6,35 @@
         <TextView
                 android:id="@+id/showinfo"
                 android:layout_width="match_parent"
-                android:layout_height="294dp"
+                android:layout_height="250dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold" />
         <TextView
                 android:id="@+id/step"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="100dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_centerHorizontal="true"
-                android:layout_marginTop="50dp"
                 android:text="@string/step"/>
         <TextView
                 android:id="@+id/orient"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="100dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_centerHorizontal="true"
-                android:layout_marginTop="1dp"
                 android:text="@string/orient"/>
-
+        <TextView
+                android:id="@+id/location"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:padding="5dp"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_centerHorizontal="true"
+                android:text="@string/location"/>
 </LinearLayout>
