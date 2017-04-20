@@ -30,18 +30,17 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-           <!-- <android.support.design.widget.TextInputLayout
+           <android.support.design.widget.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
                 <AutoCompleteTextView
-                        android:id="@+id/email"
+                        android:id="@+id/gameId"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/login_email"
-                        android:inputType="textEmailAddress"
-                        android:maxLines="1"
-                        android:singleLine="true"/>
+                        android:hint="@string/login_gameId"
+                        android:inputType="text"
+                        android:maxLines="1"/>
 
             </android.support.design.widget.TextInputLayout>
 
@@ -50,18 +49,16 @@
                     android:layout_height="0dp" android:layout_weight="1">
 
                 <EditText
-                        android:id="@+id/password"
+                        android:id="@+id/userId"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/login_password"
+                        android:hint="@string/login_userId"
                         android:imeActionId="@+id/login"
-                        android:imeActionLabel="@string/action_sign_in_short"
                         android:imeOptions="actionUnspecified"
-                        android:inputType="textPassword"
-                        android:maxLines="1"
-                        android:singleLine="true"/>
+                        android:inputType="text"
+                        android:maxLines="1"/>
 
-            </android.support.design.widget.TextInputLayout>-->
+            </android.support.design.widget.TextInputLayout>
 
             <Button
                     android:id="@+id/email_sign_in_button"

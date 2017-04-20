@@ -5,10 +5,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -20,6 +16,15 @@ import android.provider.Settings;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
+import android.widget.Toast;
+import com.example.administrator.helloworld.orient.OrientSensor;
+import com.example.administrator.helloworld.step.StepCallBack;
+import com.example.administrator.helloworld.orient.OrientCallBack;
+import com.example.administrator.helloworld.step.StepSensorAcceleration;
+import com.example.administrator.helloworld.step.StepSensorBase;
+import com.example.administrator.helloworld.step.StepSensorPedometer;
+import com.example.administrator.helloworld.util.MySocket;
+import com.example.administrator.helloworld.util.SensorUtil;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -31,7 +36,7 @@ import java.util.Random;
 /**
  * Created by Administrator on 2017/4/12.
  */
-public class ShowInfoActivity extends AppCompatActivity {
+public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack  {
     //ui 组件
     public TextView showinfo;
     //gsp定位服务
@@ -46,8 +51,9 @@ public class ShowInfoActivity extends AppCompatActivity {
     public StringBuilder lastSend;//最后一次发送的信息
     public StringBuilder sb;//发送到显示面板的信息
     public static int count=0;//步数
+    public static int orientNum=0;//方向
     //网络socket
-    public static Socket socket;//
+    public static MySocket socket;//
     //控制线程休眠
     private boolean suspendFlag = false;
 
@@ -55,14 +61,21 @@ public class ShowInfoActivity extends AppCompatActivity {
     public boolean gpsOpenDialog=true;
     public boolean netOpenDialog=true;
     //计步器
-    //Sensor mStepCount;//单次
-    //Sensor  mStepDetector;//总计
+    private TextView step;
+    private TextView orient;
+
+    private StepSensorBase stepSensor; // 计步传感器
+    private OrientSensor orientSensor; // 方向传感器
+
     //关闭线程
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_showinfo);
         showinfo= (TextView)findViewById(R.id.showinfo);
+        step = (TextView) findViewById(R.id.step);
+        orient = (TextView) findViewById(R.id.orient);
+        showInterstitial();
         progress();
     }
 
@@ -96,7 +109,10 @@ public class ShowInfoActivity extends AppCompatActivity {
             switch (msg.what) {
                 case 1://数据显示
                     show = (String) data.get("showinfo");
-                    showinfo.setText(show);
+                    if (show != "" || show != null) {
+                        showinfo.setText(show);
+                    }
+
                     break;
                 case 2://弹窗
                     type=(String) data.get("type");
@@ -139,7 +155,7 @@ public class ShowInfoActivity extends AppCompatActivity {
             Looper.prepare();//相当于该线程Looper的初始化
             try {
                 while(threadLoop) {
-                    //getSensor();
+                    getSensor();
                     getGPS();//获取gps信息
                     synchronized (this) {
                         while (suspendFlag||(!isConn("judge")||!isGPSOpen("judge")||!isPermission("judge"))) {
@@ -248,20 +264,17 @@ public class ShowInfoActivity extends AppCompatActivity {
     /**
      * 获取初始化计步器
      */
-   /* public void getSensor(){
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        //初始化计步器
-        if(mStepCount==null) {
-            mStepCount = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-        }
-        if(mStepDetector==null) {
-            mStepDetector = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
-        }
-        //注册监听者（监听传感器事件）
-        mSensorManager.registerListener(sensorEventListener, mStepDetector, SensorManager.SENSOR_DELAY_FASTEST);
+    public void getSensor(){
+        StringBuffer stringBuffer=new StringBuffer();
 
-        mSensorManager.registerListener(sensorEventListener, mStepCount, SensorManager.SENSOR_DELAY_FASTEST);
-    }*/
+        Message message=new Message();
+        Bundle bundle=new Bundle();
+        bundle.putString("step",stringBuffer.toString());
+        message.setData(bundle);
+        message.what=1;
+        handler.sendMessage(message);
+
+    }
     /**
      * 外部定义定位监测器
      */
@@ -290,27 +303,6 @@ public class ShowInfoActivity extends AppCompatActivity {
             getSendData(null);
         }
     };
-    /**
-     * 记步传感器
-     */
-   /* SensorEventListener sensorEventListener = new SensorEventListener() {
-        @Override
-        public void onSensorChanged(SensorEvent event) {
-            if (event.sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
-                //tvAllCount.setText(event.values[0] + "步");
-            }
-            if (event.sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
-                if (event.values[0] == 1.0) {
-                    count++;
-                }
-            }
-        }
-
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-        }
-    };*/
 
     /**
      * 更新textview 上的显示
@@ -321,14 +313,16 @@ public class ShowInfoActivity extends AppCompatActivity {
         sb=new StringBuilder();
         sb.append("来源"+source+"\n");
         if(location !=null){
-            sb.append(count+"当前定位服务信息：\n");
+            sb.append("当前定位服务信息：\n");
             sb.append("经度："+location.getLongitude()+"\n");//经度
             sb.append("纬度："+location.getLatitude()+"\n");//纬度
             sb.append("高度："+location.getAltitude()+"\n");//高度
             sb.append("速度："+location.getSpeed()+"\n");//速度
-            sb.append("方向："+location.getBearing()+"\n");//方向
+            sb.append("location方向："+location.getBearing()+"\n");//方向
             sb.append("定位精度："+location.getAccuracy()+"\n");//定位精度
             sb.append("时间："+timedate(location.getTime()+"")+"\n");//时间
+            sb.append("步数："+count+"\n");//定位精度
+            sb.append("orient方向："+orientNum+"\n");//时间
         }else{
             sb.append("数据为空");
         }
@@ -355,12 +349,6 @@ public class ShowInfoActivity extends AppCompatActivity {
         lastSend=new StringBuilder();
         int bp=0;
         if(location !=null){
-            if(location.getSpeed()!=0){
-                bp= new Random().nextInt(3);
-                count+=bp;
-            }else{
-                count++;
-            }
             lastSend.append("$00003"+location.getLongitude()+","+location.getLatitude());//经纬度
             //安静状态下，成人正常心率为60～100次/分钟，理想心率应为55～70次/分钟（运动员的心率较普通成人偏慢，一般为50次/分钟左右
             lastSend.append("|"+((int)(location.getSpeed()/6)+60+new Random().nextInt(5)));//心率
@@ -386,7 +374,7 @@ public class ShowInfoActivity extends AppCompatActivity {
                 netOpenDialog=false;
             }
             if(socket==null) {
-                socket = new Socket("183.250.160.124", 8888);//
+                socket = new MySocket();//
             }
         }catch(Exception ex){
             Message message=new Message();
@@ -404,7 +392,7 @@ public class ShowInfoActivity extends AppCompatActivity {
      */
     private void closeSocket(){
         try {
-            socket.close();
+            socket.closeSocket();
         }catch(Exception ex){
             showinfo.setText("连接关闭失败："+ex.toString());
         }
@@ -417,10 +405,11 @@ public class ShowInfoActivity extends AppCompatActivity {
     private void Send(String data){
         try {
             //2.获取输出流，向服务器端发送信息
-            OutputStream os = socket.getOutputStream();//字节输出流
+           /* OutputStream os = socket.getOutputStream();//字节输出流
             PrintWriter pw = new PrintWriter(os);//将输出流包装为打印流
             pw.write(data);
-            pw.flush();
+            pw.flush();*/
+           socket.writeData(data);
             //socket.shutdownOutput();//关闭输出流
         }catch(Exception ex){
             //showinfo.setText("传输数据失败："+ex.toString());
@@ -638,4 +627,51 @@ public class ShowInfoActivity extends AppCompatActivity {
         });
         builder.show();
     }
+
+    /**
+     * 计步器
+     */
+    public void showInterstitial(){
+        SensorUtil.printAll(this); // 打印所有可用传感器
+
+        // 开启计步监听
+        stepSensor = new StepSensorPedometer(this, this);
+        if (!stepSensor.registerStep()) {
+            stepSensor = new StepSensorAcceleration(this, this);
+            if (!stepSensor.registerStep()) {
+                Toast.makeText(this, "加速度传感器不可用！", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        // 开启方向监听
+        orientSensor = new OrientSensor(this, this);
+        if (!orientSensor.registerOrient()) {
+            Toast.makeText(this, "方向传感器不可用！", Toast.LENGTH_SHORT).show();
+        }
+    }
+    @Override
+    public void Step(int stepNum) {
+        //  计步回调
+        step.setText("步数:" + stepNum);
+        count=stepNum;
+        //stepSurfaceView.autoAddPoint(0, 30);
+    }
+
+
+    @Override
+    public void Orient(float o) {
+        // 方向回调
+        orient.setText("方向:" + (int) o);
+        orientNum=(int)o;
+    }
+
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 注销传感器监听
+        stepSensor.unregisterStep();
+        orientSensor.unregisterOrient();
+    }
+
 }

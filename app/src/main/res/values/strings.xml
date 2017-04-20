@@ -11,11 +11,16 @@
     <string name="error_incorrect_password">This password is incorrect</string>
     <string name="error_field_required">This field is required</string>
     <string name="permission_rationale">"Contacts permissions are needed for providing email completions."</string>
+    <!--error-->
+    <string name="error_null">not null</string>
+    <string name="error_no_login">登录信息有误</string>
     <!--登录页面变量-->
-    <string name="login_email">邮箱</string>
-    <string name="login_password">密码</string>
+    <string name="login_gameId">比赛编号</string>
+    <string name="login_userId">运动员编号</string>
     <string name="login_button">start</string>
     <string name="login_title">demo</string>
     <!--展示数据页面-->
     <string name="showinfo_title">传感器数据</string>
+    <string name="step">步数：0</string>
+    <string name="orient">方向：0</string>
 </resources>
