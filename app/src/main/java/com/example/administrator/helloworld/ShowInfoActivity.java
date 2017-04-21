@@ -21,6 +21,8 @@ import com.example.administrator.helloworld.location.LocationSensor;
 import com.example.administrator.helloworld.orient.OrientSensor;
 import com.example.administrator.helloworld.step.*;
 import com.example.administrator.helloworld.orient.OrientCallBack;
+import com.example.administrator.helloworld.template.TemplateCallBack;
+import com.example.administrator.helloworld.template.TemplateSensor;
 import com.example.administrator.helloworld.util.MySocket;
 import com.example.administrator.helloworld.util.SensorUtil;
 
@@ -31,7 +33,7 @@ import java.util.Random;
 /**
  * Created by Administrator on 2017/4/12.
  */
-public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack ,LocationCallBack {
+public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack ,LocationCallBack,TemplateCallBack {
     //ui 组件
     public TextView showinfo;
     //gsp定位服务
@@ -57,11 +59,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     private TextView step;
     private TextView orient;
     private TextView locationview;
+    private TextView template;
 
     private StepSensorBase stepSensor; // 计步传感器
     private OrientSensor orientSensor; // 方向传感器
     private LocationSensor locationSensor;//定位
-
+    private TemplateSensor templateSensor;//温度
     //关闭线程
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,7 +73,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         showinfo= (TextView)findViewById(R.id.showinfo);
         step = (TextView) findViewById(R.id.step);
         orient = (TextView) findViewById(R.id.orient);
-        locationview=(TextView)findViewById(R.id.location);
+        //locationview=(TextView)findViewById(R.id.location);
+        template=(TextView)findViewById(R.id.template);
         initShow();
         showInterstitial();
         progress();
@@ -205,6 +209,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         }
         if(socket==null) {
             socket = new MySocket();//
+            socket.createSocket();
         }
         //系统服务
         location = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -300,11 +305,11 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         lastSend=new StringBuilder();
         int bp=0;
         if(location !=null){
-            lastSend.append("$00003"+location.getLongitude()+","+location.getLatitude());//经纬度
+            lastSend.append("$00003"+location.getLongitude()+","+location.getLatitude());//经纬度 √
             //安静状态下，成人正常心率为60～100次/分钟，理想心率应为55～70次/分钟（运动员的心率较普通成人偏慢，一般为50次/分钟左右
             lastSend.append("|"+((int)(location.getSpeed()/6)+60+new Random().nextInt(5)));//心率
             lastSend.append("|"+location.getSpeed());//速度
-            lastSend.append("|"+count);//步数
+            lastSend.append("|"+count);//步数 √
             lastSend.append("|"+bp);//步频
             lastSend.append(String.format("|" + (37 + (location.getSpeed() / 600.0))));//体温
             lastSend.append("|"+52);//配速
@@ -504,6 +509,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 //resume();//唤醒线程
+                socket.writeData("00002");//向服务器发送终止
                 stop();
                 finish();
             }
@@ -523,7 +529,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      * 计步器
      */
     public void showInterstitial(){
-        SensorUtil.printAll(this); // 打印所有可用传感器
+        //SensorUtil.printAll(this); // 打印所有可用传感器
 
         // 开启计步监听
         stepSensor = new StepSensorPedometer(this, this);
@@ -540,7 +546,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             orient.setText("方向传感器不可用！");
         }
 
-        locationSensor=new LocationSensor(this,this);
+        // 温度方向监听
+        templateSensor = new TemplateSensor(this, this);
+        if (!templateSensor.registerTemplate()) {
+            template.setText("温度传感器不可用！");
+        }
+        //locationSensor=new LocationSensor(this,this);
     }
     @Override
     public void Step(int stepNum) {
@@ -559,11 +570,16 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
        locationview.setText("坐标："+local.getLatitude()+","+local.getLongitude());
     }
     @Override
+    public void Template(float t) {
+        template.setText("温度："+t);
+    }
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         // 注销传感器监听
         stepSensor.unregisterStep();
         orientSensor.unregisterOrient();
+        templateSensor.unregisterTemplate();
     }
 
     /**

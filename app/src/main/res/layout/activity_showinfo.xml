@@ -29,12 +29,12 @@
                 android:layout_centerHorizontal="true"
                 android:text="@string/orient"/>
         <TextView
-                android:id="@+id/location"
+                android:id="@+id/template"
                 android:layout_width="match_parent"
                 android:layout_height="100dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_centerHorizontal="true"
-                android:text="@string/location"/>
+                android:text="@string/template"/>
 </LinearLayout>

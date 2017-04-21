@@ -3,7 +3,6 @@ package com.example.administrator.helloworld.util;
 
 import android.os.Bundle;
 import android.os.Message;
-import com.example.administrator.helloworld.ShowInfoActivity;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -23,7 +22,6 @@ public class MySocket {
      * 无参构造函数
      */
     public MySocket(){
-        createSocket();
     }
 
     /**
@@ -34,23 +32,34 @@ public class MySocket {
     public MySocket(String ip,int port){
         this.IP=ip;
         this.PORT=port;
-        createSocket();
     }
 
     /**
      * 创建socket
      *
      */
-    private void createSocket(){
+    public Boolean createSocket(){
         try {
             if (socket == null) {
                 socket = new Socket(IP, PORT);//
             }
+            return true;
         }catch (Exception ex){
-
+            return false;
         }
     }
-
+    /**
+     * 重新创建socket
+     *
+     */
+    public Boolean reCreateSocket(){
+        try {
+            socket = new Socket(IP, PORT);
+            return true;
+        }catch (Exception ex){
+            return false;
+        }
+    }
     /**
      * 关闭socket连接
      */
@@ -97,11 +106,7 @@ public class MySocket {
             pw.write(data);
             pw.flush();
         }catch (Exception ex){
-            Message message=new Message();
-            Bundle bundle=new Bundle();
-            bundle.putString("showinfo","传输数据失败："+ex.toString());
-            message.setData(bundle);
-            message.what=1;
+            ex.toString();
         }
     }
 

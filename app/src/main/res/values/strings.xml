@@ -24,4 +24,5 @@
     <string name="step">步数：0</string>
     <string name="orient">方向：0</string>
     <string name="location">定位：0,0</string>
+    <string name="template">温度：0</string>
 </resources>
