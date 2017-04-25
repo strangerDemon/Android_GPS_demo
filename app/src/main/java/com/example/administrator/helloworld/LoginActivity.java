@@ -25,8 +25,10 @@ public class LoginActivity extends AppCompatActivity{
 
     private View focusView = null;//焦点view
     private boolean cancel=false;
-    private String gameId;
-    private String userId;
+    private static String gameId;
+    private static String userId;
+
+    public static boolean isOpenMain=false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -103,17 +105,17 @@ public class LoginActivity extends AppCompatActivity{
      */
     private Boolean checkUser(String userId,String gameId) {
         MySocket socket = new MySocket();
-        if (socket.reCreateSocket()) {
+        try{
+            socket.reCreateSocket();
             socket.writeData("00001" + userId);//少了这个服务器收不到下面的信息
             socket.writeData("00001" + userId);
             String answer = socket.readData();
             if (answer == "000011") {
                 return true;
             } else {
-                return true;
-                // return false;
+                return true;//test
             }
-        } else {
+        }catch(Exception ex){
             Message message=new Message();
             Bundle bundle = new Bundle();
             bundle.putString("text", "服务器连接失败");
@@ -131,7 +133,8 @@ public class LoginActivity extends AppCompatActivity{
     class loginThread extends Thread {
         public void run() {
             try {
-                if (checkUser(userId,gameId)) {
+                if (checkUser(userId,gameId)&&!isOpenMain) {
+                    isOpenMain=true;
                     Intent intent = new Intent();
                     intent.setClass(LoginActivity.this, ShowInfoActivity.class);
                     LoginActivity.this.startActivity(intent);
@@ -140,6 +143,13 @@ public class LoginActivity extends AppCompatActivity{
                 e.toString();
             }
         }
+    }
+
+    public static String getUserId(){
+        return userId;
+    }
+    public static String getGameId(){
+        return gameId;
     }
 }
 

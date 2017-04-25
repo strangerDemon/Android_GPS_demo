@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -16,6 +15,7 @@ import android.provider.Settings;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
+import android.widget.Toast;
 import com.example.administrator.helloworld.location.LocationCallBack;
 import com.example.administrator.helloworld.location.LocationSensor;
 import com.example.administrator.helloworld.orient.OrientSensor;
@@ -24,7 +24,6 @@ import com.example.administrator.helloworld.orient.OrientCallBack;
 import com.example.administrator.helloworld.template.TemplateCallBack;
 import com.example.administrator.helloworld.template.TemplateSensor;
 import com.example.administrator.helloworld.util.MySocket;
-import com.example.administrator.helloworld.util.SensorUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -34,24 +33,17 @@ import java.util.Random;
  * Created by Administrator on 2017/4/12.
  */
 public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack ,LocationCallBack,TemplateCallBack {
-    //ui 组件
-    public TextView showinfo;
     //gsp定位服务
     LocationManager location;
-    //线程
-    static beginThread thread;
-    //循环
-    boolean threadLoop=true;
+    Location local;
     //数据
     public StringBuilder lastSend;//最后一次发送的信息
-    public StringBuilder sb;//发送到显示面板的信息
     public static int count=0;//步数
     public static int orientNum=0;//方向
     //网络socket
     public static MySocket socket;//
-    //控制线程休眠
-    private boolean suspendFlag = false;
-
+    //线程
+    beginThread thread;
     //dialog提醒一次
     public boolean gpsOpenDialog=true;
     public boolean netOpenDialog=true;
@@ -70,14 +62,15 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_showinfo);
-        showinfo= (TextView)findViewById(R.id.showinfo);
         step = (TextView) findViewById(R.id.step);
         orient = (TextView) findViewById(R.id.orient);
-        //locationview=(TextView)findViewById(R.id.location);
+        locationview=(TextView)findViewById(R.id.showinfo);
         template=(TextView)findViewById(R.id.template);
         initShow();
+        check();
         showInterstitial();
-        progress();
+        thread=new beginThread();
+        thread.start();
     }
 
     /**
@@ -89,13 +82,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      */
     @Override
     public void onBackPressed() {
-        Message message = new Message();
-        Bundle bundle = new Bundle();
-        bundle.putString("type", "return");
-        message.setData(bundle);
-        message.what = 2;
-        handler.sendMessage(message);
-        suspend();
+        isReturn();
     }
     /**
      * 因为ui只能在主线程中修改，应该要用handler处理
@@ -109,45 +96,19 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             String type = "";
             switch (msg.what) {
                 case 1://数据显示
-                    show = (String) data.get("showinfo");
-                    if (show != "" || show != null) {
-                        showinfo.setText(show);
-                    }
-
                     break;
                 case 2://弹窗
-                    type=(String) data.get("type");
-                    if( type == "connect") {
-                        isConnDialog();
-                    }else if(type == "permission"){
-                        isPermissionDialog();
-                    }else if(type == "gpsOpen"){
-                        isGPSOpenDialog();
-                    }else if(type == "socket"){
-                        isSocketConnectDialog();
-                    }else if(type == "return"){
-                        isReturn();
+                    break;
+                case 3://toast
+                    show = (String) data.get("text");
+                    if (show != "" || show != null) {
+                        Toast.makeText(ShowInfoActivity.this, show, 0).show();
                     }
                     break;
             }
             super.handleMessage(msg);
         }
     };
-
-    /**
-     * android.os.NetworkOnMainThreadException是说不要在主线程中访问网络
-     * android 中 主线程不能访问网络
-     *            子线程不能修改ui
-     * 这个是android3.0版本开始就强制程序不能在主线程中访问网络，要把访问网络放在独立的线程中。
-     * 启动线程
-     */
-    public void progress() {
-        if(thread==null) {
-            thread = new beginThread();
-            thread.start();
-        }
-    }
-
     /**
      * 自定义线程操作
      */
@@ -155,13 +116,11 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         public void run() {
             Looper.prepare();//相当于该线程Looper的初始化
             try {
-                while(threadLoop) {
-                    getGPS();//获取gps信息
-                    synchronized (this) {
-                        while (suspendFlag||(!isConn("judge")||!isGPSOpen("judge")||!isPermission("judge"))) {
-                            sleep(1000);//wait线程被暂停，需要notify 来释放
-                        }
+                while(true) {
+                    if(local!=null){
+                        getSendData(local);
                     }
+                    sleep(2000);//wait线程被暂停，需要notify 来释放
                 }
             } catch (Exception e) {
                 Message message=new Message();
@@ -175,124 +134,51 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         }
     }
     /**
-     * 线程暂停
+     * 判断是否有连接网络，gps，权限
      */
-    public void suspend() {
-        this.suspendFlag = true;
-    }
-
-    /**
-     * 唤醒线程
-     */
-    public synchronized void resume() {
-        this.suspendFlag = false;
-        //notify();
-    }
-    /**
-     * 停止线程运行。
-     */
-    public void stop() {
-        if (thread != null){
-            thread.interrupt();
-            thread = null;
-        }
-    }
-
-    /**
-     * 获取gps信息 ，经度、纬度、速度、高度、方向
-     */
-    private void getGPS() {
+    private void check() {
         //创建连接 防止 运行一半的时候 服务器挂了，用户关掉数据
-        if(netOpenDialog) {
+        if (netOpenDialog) {
             isConn("dialog");
-            netOpenDialog=false;
+            netOpenDialog = false;
+        } else if (!isConn("judge")) {
+                Message message=new Message();
+                message.what=3;
+                Bundle bundle = new Bundle();
+                bundle.putString("text", "网络连接失败");
+                message.setData(bundle);
+                handler.sendMessage(message);
         }
-        if(socket==null) {
-            socket = new MySocket();//
-            socket.createSocket();
-        }
-        //系统服务
-        location = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
-        //获取定位服务，因为是系统的服务，因此不能new出来
-        if(gpsOpenDialog) {
-            isGPSOpen("dialog");
-            gpsOpenDialog=false;
-        }
-
-        try {
-            if (Build.VERSION.SDK_INT >= 23) { //CONTROLLO PER ANDROID 6.0 O SUPERIORE
-                isPermission("dialog");
-            } else {//android 6.0 以下
+        if (socket == null) {
+            try {
+                socket = new MySocket();//
+                socket.createSocket();
+            }catch(Exception ex){
+                Message message=new Message();
+                message.what=3;
+                Bundle bundle = new Bundle();
+                bundle.putString("text", "服务器连接失败");
+                message.setData(bundle);
+                handler.sendMessage(message);
             }
-        } catch (Exception ex) {}
-        location.removeUpdates(onLocationChanged);
-        if (location.isProviderEnabled(LocationManager.GPS_PROVIDER) && location.getLastKnownLocation(LocationManager.GPS_PROVIDER) != null) {
-            updateTextView("GPS_PROVIDER", location.getLastKnownLocation(LocationManager.GPS_PROVIDER));
-            getSendData(location.getLastKnownLocation(LocationManager.GPS_PROVIDER));
-        } else if (location.isProviderEnabled(LocationManager.NETWORK_PROVIDER) && location.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) != null) {
-            updateTextView("NETWORK_PROVIDER", location.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
-            getSendData(location.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
-        } else {
-            updateTextView("PASSIVE_PROVIDER", location.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
-            getSendData(location.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER));
         }
-        try {
-            beginThread.sleep(2000);
-        } catch (Exception ex) {}
-    }
-    /**
-     * 外部定义定位监测器
-     */
-    LocationListener onLocationChanged= new LocationListener() {
-        //当定位服务信息改变时
-        @Override
-        public void onLocationChanged(Location location) {
+        //获取定位服务，因为是系统的服务，因此不能new出来
+        if (gpsOpenDialog) {
+            isGPSOpen("dialog");
+            gpsOpenDialog = false;
+        } else if (!isGPSOpen("judge")) {
+            Message message=new Message();
+            message.what=3;
+            Bundle bundle = new Bundle();
+            bundle.putString("text", "GPS连接失败");
+            message.setData(bundle);
+            handler.sendMessage(message);
         }
-        //状态改变时
-        @Override
-        public void onStatusChanged(String provider, int status, Bundle extras) {
 
+        if (Build.VERSION.SDK_INT >= 23) { //CONTROLLO PER ANDROID 6.0 O SUPERIORE
+            isPermission("dialog");
+        } else {//android 6.0 以下
         }
-        //gsp locationProvider 可用时
-        @Override
-        public void onProviderEnabled(String provider) {
-        }
-        //gsp locationProvider 不可用时
-        @Override
-        public void onProviderDisabled(String provider) {
-        }
-    };
-
-    /**
-     * 更新textview 上的显示
-     * @param source
-     * @param location
-     */
-    private void updateTextView(String source,Location location){
-        sb=new StringBuilder();
-        sb.append("来源"+source+"\n");
-        if(location !=null){
-            sb.append("当前定位服务信息：\n");
-            sb.append("经度："+location.getLongitude()+"\n");//经度
-            sb.append("纬度："+location.getLatitude()+"\n");//纬度
-            sb.append("高度："+location.getAltitude()+"\n");//高度
-            sb.append("速度："+location.getSpeed()+"\n");//速度
-            sb.append("location方向："+location.getBearing()+"\n");//方向
-            sb.append("定位精度："+location.getAccuracy()+"\n");//定位精度
-            sb.append("时间："+timedate(location.getTime()+"")+"\n");//时间
-            sb.append("步数："+count+"\n");//步数
-            sb.append("orient方向："+orientNum+"\n");//orient方向
-        }else{
-            sb.append("数据为空");
-        }
-        //在线程中不能操作view
-        Message message=new Message();
-        Bundle bundle=new Bundle();
-        bundle.putString("showinfo",sb.toString());
-        message.setData(bundle);
-        message.what=1;
-        handler.sendMessage(message);
     }
 
     /**
@@ -302,6 +188,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      * @param location
      */
     private void getSendData(Location location){
+        check();
         lastSend=new StringBuilder();
         int bp=0;
         if(location !=null){
@@ -316,7 +203,39 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             lastSend.append("|"+68);//步幅
         }else{
         }
-        socket.writeData(lastSend.toString());
+        try {
+            socket.writeData(lastSend.toString());
+        }catch(Exception ex){
+            Message message=new Message();
+            message.what=3;
+            Bundle bundle = new Bundle();
+            bundle.putString("text", "发送数据失败");
+            message.setData(bundle);
+            handler.sendMessage(message);
+            /**
+             *  关闭之前的socket 重新创建socket
+             */
+            reLogin();
+        }
+    }
+    /**
+     *  重新登录
+     *  关闭之前的socket 重新创建socket
+     */
+    public void reLogin(){
+        try {
+            socket.reCreateSocket();
+            socket.writeData("00001" + LoginActivity.getUserId());//少了这个服务器收不到下面的信息
+            socket.writeData("00001" + LoginActivity.getUserId());
+
+        }catch(Exception ex){
+            Message message=new Message();
+            message.what=3;
+            Bundle bundle = new Bundle();
+            bundle.putString("text", "重新连接服务器失败");
+            message.setData(bundle);
+            handler.sendMessage(message);
+        }
     }
     /**
      * 时间格式转换
@@ -339,13 +258,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         ConnectivityManager conManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo network = conManager.getActiveNetworkInfo();
         if(network==null&&type=="dialog") {
-            Message message = new Message();
-            Bundle bundle = new Bundle();
-            bundle.putString("type", "connect");
-            message.setData(bundle);
-            message.what = 2;
-            handler.sendMessage(message);
-            suspend();//暂停线程
+            isConnDialog();
             return false;
         }else if(network==null&&type=="judge") {
             return false;
@@ -373,7 +286,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                         startActivityForResult(intent,0);
                     }
                 }
-                resume();
             }
 
         });
@@ -393,13 +305,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     public boolean isPermission(String type){
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) < 0) {//打开权限请求
             if(type=="dialog") {
-                Message message = new Message();
-                Bundle bundle = new Bundle();
-                bundle.putString("type", "permission");
-                message.setData(bundle);
-                message.what = 2;
-                handler.sendMessage(message);
-                suspend();
+                isPermissionDialog();
                 return false;
             }else{
                 return false;
@@ -411,7 +317,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     }
     public void isPermissionDialog(){
         AlertDialog.Builder permissionDialog = new AlertDialog.Builder(ShowInfoActivity.this);
-        permissionDialog.setMessage("应用的位置权限未打开，是否打开？");
+        permissionDialog.setMessage("应用的位置权限未打开，无法获取位置信息，是否打开？");
         permissionDialog.setTitle("Warning");
         permissionDialog.setPositiveButton("确认", new DialogInterface.OnClickListener() {
             @Override
@@ -420,7 +326,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                 Uri packageURI = Uri.parse("package:" + getPackageName());
                 Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageURI);
                 startActivity(intent);
-                resume();
             }
 
         });
@@ -428,7 +333,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
-                //finish();关闭当前页面
             }
         });
         // 显示
@@ -442,13 +346,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         location = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         if(!location.isProviderEnabled(LocationManager.GPS_PROVIDER)){
             if(type=="dialog") {
-                Message message = new Message();
-                Bundle bundle = new Bundle();
-                bundle.putString("type", "gpsOpen");
-                message.setData(bundle);
-                message.what = 2;
-                handler.sendMessage(message);
-                suspend();
+                isGPSOpenDialog();
                 return false;
             }else{
                 return false;
@@ -467,15 +365,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                 dialog.dismiss();
                 Intent intent=new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                 startActivityForResult(intent,0);
-                resume();//唤醒线程
             }
         });
         gpsOpenDialog.setNegativeButton("取消", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
-                //finish();
-                resume();//唤醒线程
             }
         });
         // 显示
@@ -491,8 +386,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         builder.setPositiveButton("确认", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                // finish();
-                //resume();
             }
         });
         builder.show();
@@ -508,9 +401,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         builder.setPositiveButton("确认", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                //resume();//唤醒线程
-                socket.writeData("00002");//向服务器发送终止
-                stop();
+                try {
+                    socket.writeData("00002");//向服务器发送终止
+                }catch (Exception e){
+                }
+                LoginActivity.isOpenMain=false;
+                thread.interrupt();
                 finish();
             }
         });
@@ -518,8 +414,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
-                //finish();
-                resume();//唤醒线程
             }
         });
         builder.show();
@@ -529,8 +423,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      * 计步器
      */
     public void showInterstitial(){
-        //SensorUtil.printAll(this); // 打印所有可用传感器
-
         // 开启计步监听
         stepSensor = new StepSensorPedometer(this, this);
         if (!stepSensor.registerStep()) {
@@ -551,24 +443,34 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         if (!templateSensor.registerTemplate()) {
             template.setText("温度传感器不可用！");
         }
-        //locationSensor=new LocationSensor(this,this);
+
+        //Location定位服务
+        locationSensor=new LocationSensor(this,this);
+        if (!locationSensor.registerLocation()) {
+            locationview.setText("定位服务不可用！");
+        }
     }
+    //4个监听器的数据源监测数据回调
+    //  计步回调
     @Override
     public void Step(int stepNum) {
-        //  计步回调
         step.setText("步数:" + stepNum);
         count=stepNum;
     }
+    // 方向回调
     @Override
     public void Orient(float o) {
-        // 方向回调
         orient.setText("方向:" + (int) o);
         orientNum=(int)o;
     }
+    //定位回调
     @Override
     public void Location(Location local) {
-       locationview.setText("坐标："+local.getLatitude()+","+local.getLongitude());
+       locationview.setText("坐标："+local.getLatitude()+","+local.getLongitude()+"\n速度："+local.getSpeed()+"    时间:"+timedate(local.getTime()+""));
+       this.local=local;
+       getSendData(local);
     }
+    //温度回调
     @Override
     public void Template(float t) {
         template.setText("温度："+t);
@@ -580,6 +482,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         stepSensor.unregisterStep();
         orientSensor.unregisterOrient();
         templateSensor.unregisterTemplate();
+        locationSensor.unregisterLocation();
     }
 
     /**
