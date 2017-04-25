@@ -1,9 +1,7 @@
 package com.example.administrator.helloworld.util;
 
 
-import android.os.Bundle;
-import android.os.Message;
-
+import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -38,27 +36,17 @@ public class MySocket {
      * 创建socket
      *
      */
-    public Boolean createSocket(){
-        try {
-            if (socket == null) {
-                socket = new Socket(IP, PORT);//
-            }
-            return true;
-        }catch (Exception ex){
-            return false;
+    public void createSocket() throws Exception {
+        if (socket == null) {
+            socket = new Socket(IP, PORT);
         }
     }
     /**
      * 重新创建socket
      *
      */
-    public Boolean reCreateSocket(){
-        try {
-            socket = new Socket(IP, PORT);
-            return true;
-        }catch (Exception ex){
-            return false;
-        }
+    public void reCreateSocket() throws Exception{
+        socket = new Socket(IP, PORT);
     }
     /**
      * 关闭socket连接
@@ -99,15 +87,14 @@ public class MySocket {
      * 发送数据
      * @param data
      */
-    public void writeData(String data){
-        try {
-            OutputStream os = socket.getOutputStream();//字节输出流
-            PrintWriter pw = new PrintWriter(os);//将输出流包装为打印流
-            pw.write(data);
-            pw.flush();
-        }catch (Exception ex){
-            ex.toString();
-        }
+    public void writeData(String data) throws Exception {
+        /*OutputStream os = socket.getOutputStream();//字节输出流
+        PrintWriter pw = new PrintWriter(os);//将输出流包装为打印流
+        pw.write(data);
+        pw.flush();*///这个不会报ioException
+        DataOutputStream os = new DataOutputStream(socket.getOutputStream());
+        os.write(data.getBytes());
+        os.flush();//这个会报ioException
     }
 
     /**
