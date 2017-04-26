@@ -23,6 +23,7 @@ import com.example.administrator.helloworld.Sensors.step.*;
 import com.example.administrator.helloworld.Sensors.orient.OrientCallBack;
 import com.example.administrator.helloworld.Sensors.template.TemplateCallBack;
 import com.example.administrator.helloworld.Sensors.template.TemplateSensor;
+import com.example.administrator.helloworld.Utils.GetServiceData;
 import com.example.administrator.helloworld.Utils.MyMessage;
 import com.example.administrator.helloworld.Utils.MySocket;
 
@@ -34,6 +35,7 @@ import java.util.Random;
  * Created by Administrator on 2017/4/12.
  */
 public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack ,LocationCallBack,TemplateCallBack {
+    public static ShowInfoActivity showInfoInstance = null;
     //gsp定位服务
     LocationManager location;
     Location local;
@@ -47,7 +49,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     beginThread thread;
     //dialog提醒一次
     public boolean gpsOpenDialog=true;
-    public boolean netOpenDialog=true;
     //计步器
     private TextView step;
     private TextView orient;
@@ -68,10 +69,10 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         locationview=(TextView)findViewById(R.id.showinfo);
         template=(TextView)findViewById(R.id.template);
         initShow();
-        check();
         showInterstitial();
         thread=new beginThread();
         thread.start();
+        showInfoInstance=this;
     }
 
     /**
@@ -103,7 +104,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                 case 3://toast
                     show = (String) data.get("text");
                     if (show != "" || show != null) {
-                        Toast.makeText(ShowInfoActivity.this, show, 0).show();
+                        Toast.makeText(ShowInfoActivity.this, show, Toast.LENGTH_SHORT).show();
                     }
                     break;
             }
@@ -133,14 +134,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     /**
      * 判断是否有连接网络，gps，权限
      */
-    private void check() {
+    private Boolean check() {
         //创建连接 防止 运行一半的时候 服务器挂了，用户关掉数据
-        if (netOpenDialog) {
-            isConn("dialog");
-            netOpenDialog = false;
-        } else if (!isConn("judge")) {
+        if (!isConn()) {
             MyMessage myMessage=new MyMessage(3,"text", "网络连接失败");
             handler.sendMessage(myMessage.getMessage());
+            return false;
         }
         if (socket == null) {
             try {
@@ -149,6 +148,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             }catch(Exception ex){
                 MyMessage myMessage=new MyMessage(3,"text", "服务器连接失败");
                 handler.sendMessage(myMessage.getMessage());
+                return false;
             }
         }
         //获取定位服务，因为是系统的服务，因此不能new出来
@@ -158,12 +158,14 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         } else if (!isGPSOpen("judge")) {
             MyMessage myMessage=new MyMessage(3,"text", "GPS连接失败");
             handler.sendMessage(myMessage.getMessage());
+            return false;
         }
 
         if (Build.VERSION.SDK_INT >= 23) { //CONTROLLO PER ANDROID 6.0 O SUPERIORE
             isPermission("dialog");
         } else {//android 6.0 以下
         }
+        return true;
     }
 
     /**
@@ -173,7 +175,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      * @param location
      */
     private void getSendData(Location location){
-        check();
+        if(!check()){return;}
         lastSend=new StringBuilder();
         int bp=0;
         if(location !=null){
@@ -206,9 +208,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     public void reLogin(){
         try {
             socket.reCreateSocket();
-            socket.writeData("$00001" + LoginActivity.getUserId());//少了这个服务器收不到下面的信息
+            socket.writeData("null");//少了这个服务器可能收不到下面的信息
             socket.writeData("$00001" + LoginActivity.getUserId());
-
         }catch(Exception ex){
             MyMessage myMessage=new MyMessage(3,"text", "重新连接服务器失败");
             handler.sendMessage(myMessage.getMessage());
@@ -231,50 +232,14 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      * 判断网络连接是否已开
      * true 已打开  false 未打开
      */
-    public boolean isConn(String type){
+    public boolean isConn(){
         ConnectivityManager conManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo network = conManager.getActiveNetworkInfo();
-        if(network==null&&type=="dialog") {
-            isConnDialog();
-            return false;
-        }else if(network==null&&type=="judge") {
+        if(network==null) {
             return false;
         }else{
             return true;
         }
-    }
-    public void isConnDialog() {
-        AlertDialog.Builder connectDialog = new AlertDialog.Builder(ShowInfoActivity.this);
-        connectDialog.setMessage("网络连接未打开，是否开启？");
-        connectDialog.setTitle("Warning");
-        connectDialog.setPositiveButton("确认", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                boolean bisConnFlag=false;
-                ConnectivityManager conManager = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
-                NetworkInfo network = conManager.getActiveNetworkInfo();
-                if(network==null){
-                    //局域网
-                    Intent intent=new Intent(Settings.ACTION_WIFI_SETTINGS);
-                    startActivityForResult(intent,0);
-                    bisConnFlag=conManager.getActiveNetworkInfo().isAvailable();
-                    if(!bisConnFlag){//蜂窝网
-                        intent=new Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS);
-                        startActivityForResult(intent,0);
-                    }
-                }
-            }
-
-        });
-        connectDialog.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                //finish();
-            }
-        });
-        // 显示
-        connectDialog.show();
     }
     /**
      * 是否有权限
@@ -364,7 +329,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 try {
-                    socket.writeData("00002");//向服务器发送终止
+                    socket.writeData("$00002");//向服务器发送终止
                 }catch (Exception e){
                 }
                 LoginActivity.isOpenMain=false;

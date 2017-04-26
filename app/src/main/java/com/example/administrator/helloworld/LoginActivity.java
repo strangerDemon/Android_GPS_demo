@@ -32,8 +32,6 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
 
     public static boolean isOpenMain=false;//主页面时候已经打开
 
-    public GetServiceData serviceData;
-
     private loginThread thread;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +64,7 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
                 case 1://数据显示
                     show = (String) data.get("text");
                     if (show != "" || show != null) {
-                        Toast.makeText(LoginActivity.this, show, 0).show();
+                        Toast.makeText(LoginActivity.this, show, Toast.LENGTH_SHORT).show();
                     }
                     break;
                 case 2://弹窗
@@ -113,9 +111,11 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
         try {
             MySocket socket = new MySocket();
             socket.reCreateSocket();
-            serviceData = new GetServiceData(this, this);
-            socket.writeData("$00001" + userId);//少了这个服务器收不到下面的信息
+            new GetServiceData(this, this);
+            socket.writeData("null" + userId);//少了这个服务器收不到下面的信息
             socket.writeData("$00001" + userId);
+            MyMessage myMessage = new MyMessage(1, "text", "登录中...");
+            handler.sendMessage(myMessage.getMessage());
         } catch (Exception ex) {
             MyMessage myMessage = new MyMessage(1, "text", "服务器连接失败");
             handler.sendMessage(myMessage.getMessage());
@@ -144,9 +144,18 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
             Intent intent = new Intent();
             intent.setClass(LoginActivity.this, ShowInfoActivity.class);
             LoginActivity.this.startActivity(intent);
-        } else {
+        } else if (callback.contains("000010")){
             MyMessage myMessage = new MyMessage(1, "text", "账号密码有误");
             handler.sendMessage(myMessage.getMessage());
+        }else{
+            MyMessage myMessage = new MyMessage(1, "text", callback);
+            handler.sendMessage(myMessage.getMessage());
+            if(callback.contains("ServerOff")){
+                isOpenMain=false;
+                ShowInfoActivity.showInfoInstance.finish();//类似于单例模式 关闭页面
+                ShowInfoActivity.showInfoInstance.handler.removeCallbacks(ShowInfoActivity.showInfoInstance.thread);//关闭线程
+                ShowInfoActivity.showInfoInstance.local=null;
+            }
         }
     }
 }
