@@ -16,14 +16,15 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.example.administrator.helloworld.location.LocationCallBack;
-import com.example.administrator.helloworld.location.LocationSensor;
-import com.example.administrator.helloworld.orient.OrientSensor;
-import com.example.administrator.helloworld.step.*;
-import com.example.administrator.helloworld.orient.OrientCallBack;
-import com.example.administrator.helloworld.template.TemplateCallBack;
-import com.example.administrator.helloworld.template.TemplateSensor;
-import com.example.administrator.helloworld.util.MySocket;
+import com.example.administrator.helloworld.Sensors.location.LocationCallBack;
+import com.example.administrator.helloworld.Sensors.location.LocationSensor;
+import com.example.administrator.helloworld.Sensors.orient.OrientSensor;
+import com.example.administrator.helloworld.Sensors.step.*;
+import com.example.administrator.helloworld.Sensors.orient.OrientCallBack;
+import com.example.administrator.helloworld.Sensors.template.TemplateCallBack;
+import com.example.administrator.helloworld.Sensors.template.TemplateSensor;
+import com.example.administrator.helloworld.Utils.MyMessage;
+import com.example.administrator.helloworld.Utils.MySocket;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -112,7 +113,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     /**
      * 自定义线程操作
      */
-    class beginThread extends Thread {
+   class beginThread extends Thread implements Runnable{
         public void run() {
             Looper.prepare();//相当于该线程Looper的初始化
             try {
@@ -123,12 +124,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                     sleep(2000);//wait线程被暂停，需要notify 来释放
                 }
             } catch (Exception e) {
-                Message message=new Message();
-                Bundle bundle=new Bundle();
-                bundle.putString("showinfo",e.toString());
-                message.setData(bundle);
-                message.what=1;
-                handler.sendMessage(message);
+                MyMessage myMessage=new MyMessage(1,"text", e.toString());
+                handler.sendMessage(myMessage.getMessage());
             }
             Looper.loop();//Looper开始执行，注意该语句执行后，这个线程的其他操作就被阻塞，只能响应事件了。
         }
@@ -142,24 +139,16 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             isConn("dialog");
             netOpenDialog = false;
         } else if (!isConn("judge")) {
-                Message message=new Message();
-                message.what=3;
-                Bundle bundle = new Bundle();
-                bundle.putString("text", "网络连接失败");
-                message.setData(bundle);
-                handler.sendMessage(message);
+            MyMessage myMessage=new MyMessage(3,"text", "网络连接失败");
+            handler.sendMessage(myMessage.getMessage());
         }
         if (socket == null) {
             try {
                 socket = new MySocket();//
                 socket.createSocket();
             }catch(Exception ex){
-                Message message=new Message();
-                message.what=3;
-                Bundle bundle = new Bundle();
-                bundle.putString("text", "服务器连接失败");
-                message.setData(bundle);
-                handler.sendMessage(message);
+                MyMessage myMessage=new MyMessage(3,"text", "服务器连接失败");
+                handler.sendMessage(myMessage.getMessage());
             }
         }
         //获取定位服务，因为是系统的服务，因此不能new出来
@@ -167,12 +156,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             isGPSOpen("dialog");
             gpsOpenDialog = false;
         } else if (!isGPSOpen("judge")) {
-            Message message=new Message();
-            message.what=3;
-            Bundle bundle = new Bundle();
-            bundle.putString("text", "GPS连接失败");
-            message.setData(bundle);
-            handler.sendMessage(message);
+            MyMessage myMessage=new MyMessage(3,"text", "GPS连接失败");
+            handler.sendMessage(myMessage.getMessage());
         }
 
         if (Build.VERSION.SDK_INT >= 23) { //CONTROLLO PER ANDROID 6.0 O SUPERIORE
@@ -206,12 +191,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         try {
             socket.writeData(lastSend.toString());
         }catch(Exception ex){
-            Message message=new Message();
-            message.what=3;
-            Bundle bundle = new Bundle();
-            bundle.putString("text", "发送数据失败");
-            message.setData(bundle);
-            handler.sendMessage(message);
+            MyMessage myMessage=new MyMessage(3,"text", "发送数据失败");
+            handler.sendMessage(myMessage.getMessage());
             /**
              *  关闭之前的socket 重新创建socket
              */
@@ -225,16 +206,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     public void reLogin(){
         try {
             socket.reCreateSocket();
-            socket.writeData("00001" + LoginActivity.getUserId());//少了这个服务器收不到下面的信息
-            socket.writeData("00001" + LoginActivity.getUserId());
+            socket.writeData("$00001" + LoginActivity.getUserId());//少了这个服务器收不到下面的信息
+            socket.writeData("$00001" + LoginActivity.getUserId());
 
         }catch(Exception ex){
-            Message message=new Message();
-            message.what=3;
-            Bundle bundle = new Bundle();
-            bundle.putString("text", "重新连接服务器失败");
-            message.setData(bundle);
-            handler.sendMessage(message);
+            MyMessage myMessage=new MyMessage(3,"text", "重新连接服务器失败");
+            handler.sendMessage(myMessage.getMessage());
         }
     }
     /**
@@ -377,21 +354,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         gpsOpenDialog.show();
     }
     /**
-     * 服务器连接失败
-     */
-    public void isSocketConnectDialog(){
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("服务器连接失败");
-        builder.setTitle("Warning");
-        builder.setPositiveButton("确认", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-            }
-        });
-        builder.show();
-    }
-
-    /**
      * 是否要退出
      */
     public void isReturn(){
@@ -406,7 +368,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                 }catch (Exception e){
                 }
                 LoginActivity.isOpenMain=false;
-                thread.interrupt();
+                local=null;
+                handler.removeCallbacks(thread);
                 finish();
             }
         });

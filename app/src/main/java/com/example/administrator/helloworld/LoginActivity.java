@@ -13,22 +13,28 @@ import android.widget.Button;
 import android.content.Intent;
 import android.widget.EditText;
 import android.widget.Toast;
-import com.example.administrator.helloworld.util.MySocket;
+import com.example.administrator.helloworld.Utils.GetServiceData;
+import com.example.administrator.helloworld.Utils.GetServiceDataCallBack;
+import com.example.administrator.helloworld.Utils.MyMessage;
+import com.example.administrator.helloworld.Utils.MySocket;
 /**
  *
  */
-public class LoginActivity extends AppCompatActivity{
+public class LoginActivity extends AppCompatActivity implements GetServiceDataCallBack{
 
     private EditText gameIdView;
     private EditText userIdView;
-    private loginThread thread;
 
     private View focusView = null;//焦点view
     private boolean cancel=false;
     private static String gameId;
     private static String userId;
 
-    public static boolean isOpenMain=false;
+    public static boolean isOpenMain=false;//主页面时候已经打开
+
+    public GetServiceData serviceData;
+
+    private loginThread thread;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -103,53 +109,45 @@ public class LoginActivity extends AppCompatActivity{
      * @param gameId
      * @return
      */
-    private Boolean checkUser(String userId,String gameId) {
-        MySocket socket = new MySocket();
-        try{
+    private void checkUser(String userId, String gameId) {
+        try {
+            MySocket socket = new MySocket();
             socket.reCreateSocket();
-            socket.writeData("00001" + userId);//少了这个服务器收不到下面的信息
-            socket.writeData("00001" + userId);
-            String answer = socket.readData();
-            if (answer == "000011") {
-                return true;
-            } else {
-                return true;//test
-            }
-        }catch(Exception ex){
-            Message message=new Message();
-            Bundle bundle = new Bundle();
-            bundle.putString("text", "服务器连接失败");
-            message.setData(bundle);
-            message.what = 1;
-            handler.sendMessage(message);
-            return false;
+            serviceData = new GetServiceData(this, this);
+            socket.writeData("$00001" + userId);//少了这个服务器收不到下面的信息
+            socket.writeData("$00001" + userId);
+        } catch (Exception ex) {
+            MyMessage myMessage = new MyMessage(1, "text", "服务器连接失败");
+            handler.sendMessage(myMessage.getMessage());
         }
     }
-
     /**
      * 主线程不能访问网络
      * 自定义线程操作
      */
     class loginThread extends Thread {
-        public void run() {
-            try {
-                if (checkUser(userId,gameId)&&!isOpenMain) {
-                    isOpenMain=true;
-                    Intent intent = new Intent();
-                    intent.setClass(LoginActivity.this, ShowInfoActivity.class);
-                    LoginActivity.this.startActivity(intent);
-                }
-            } catch (Exception e) {
-                e.toString();
-            }
-        }
+        public void run() {checkUser(userId,gameId);}
     }
-
+    //setting getting
     public static String getUserId(){
         return userId;
     }
     public static String getGameId(){
         return gameId;
+    }
+
+    //callback
+    @Override
+    public void ServiceData(String callback) {
+        if (callback.contains("000011")  && !isOpenMain) {
+            isOpenMain = true;
+            Intent intent = new Intent();
+            intent.setClass(LoginActivity.this, ShowInfoActivity.class);
+            LoginActivity.this.startActivity(intent);
+        } else {
+            MyMessage myMessage = new MyMessage(1, "text", "账号密码有误");
+            handler.sendMessage(myMessage.getMessage());
+        }
     }
 }
 
