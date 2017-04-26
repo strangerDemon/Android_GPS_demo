@@ -1,4 +1,4 @@
-package com.example.administrator.helloworld.util;
+package com.example.administrator.helloworld.Utils;
 import android.content.Context;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;

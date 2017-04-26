@@ -1,10 +1,8 @@
-package com.example.administrator.helloworld.util;
+package com.example.administrator.helloworld.Utils;
 
 
 import java.io.DataOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.Socket;
 
 /**
@@ -13,7 +11,7 @@ import java.net.Socket;
  */
 public class MySocket {
     private static Socket socket;
-    private static String IP="183.250.160.124";//192.168.1.94
+    private static String IP="192.168.1.100";//183.250.160.124,192.168.1.94
     private static int  PORT=8888;
 
     /**
