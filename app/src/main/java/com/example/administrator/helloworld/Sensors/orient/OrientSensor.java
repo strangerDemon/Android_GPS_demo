@@ -1,4 +1,4 @@
-package com.example.administrator.helloworld.orient;
+package com.example.administrator.helloworld.Sensors.orient;
 
 import android.content.Context;
 import android.hardware.Sensor;

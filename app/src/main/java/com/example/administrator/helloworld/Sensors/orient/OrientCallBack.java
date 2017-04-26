@@ -1,4 +1,4 @@
-package com.example.administrator.helloworld.orient;
+package com.example.administrator.helloworld.Sensors.orient;
 
 /**
  * Created by 19219 on 2017/3/12.

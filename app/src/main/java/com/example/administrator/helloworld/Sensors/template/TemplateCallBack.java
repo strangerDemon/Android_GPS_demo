@@ -1,4 +1,4 @@
-package com.example.administrator.helloworld.template;
+package com.example.administrator.helloworld.Sensors.template;
 
 /**
  * Created by Administrator on 2017/4/20.

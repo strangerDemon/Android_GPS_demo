@@ -1,4 +1,4 @@
-package com.example.administrator.helloworld.step;
+package com.example.administrator.helloworld.Sensors.step;
 
 import android.os.Handler;
 import android.os.Message;

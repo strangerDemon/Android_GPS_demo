@@ -1,4 +1,4 @@
-package com.example.administrator.helloworld.location;
+package com.example.administrator.helloworld.Sensors.location;
 
 import android.content.Context;
 import android.location.Criteria;

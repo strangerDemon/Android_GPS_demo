@@ -1,4 +1,4 @@
-package com.example.administrator.helloworld.template;
+package com.example.administrator.helloworld.Sensors.template;
 
 import android.content.Context;
 import android.hardware.Sensor;
