@@ -14,7 +14,7 @@
         <TextView
                 android:id="@+id/step"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
+                android:layout_height="35dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold"
@@ -23,7 +23,7 @@
         <TextView
                 android:id="@+id/orient"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
+                android:layout_height="35dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold"
@@ -32,10 +32,19 @@
         <TextView
                 android:id="@+id/template"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
+                android:layout_height="35dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_centerHorizontal="true"
                 android:text="@string/template"/>
+        <TextView
+                android:id="@+id/status"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:padding="5dp"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_centerHorizontal="true"
+                android:text="wxin"/>
 </LinearLayout>

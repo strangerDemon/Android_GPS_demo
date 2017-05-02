@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.location.GpsSatellite;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
@@ -18,23 +19,24 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.example.administrator.helloworld.Sensors.location.LocationCallBack;
 import com.example.administrator.helloworld.Sensors.location.LocationSensor;
+import com.example.administrator.helloworld.Sensors.location.StatusCallBack;
 import com.example.administrator.helloworld.Sensors.orient.OrientSensor;
 import com.example.administrator.helloworld.Sensors.step.*;
 import com.example.administrator.helloworld.Sensors.orient.OrientCallBack;
 import com.example.administrator.helloworld.Sensors.template.TemplateCallBack;
 import com.example.administrator.helloworld.Sensors.template.TemplateSensor;
-import com.example.administrator.helloworld.Utils.GetServiceData;
 import com.example.administrator.helloworld.Utils.MyMessage;
 import com.example.administrator.helloworld.Utils.MySocket;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 
 /**
  * Created by Administrator on 2017/4/12.
  */
-public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack ,LocationCallBack,TemplateCallBack {
+public class ShowInfoActivity extends AppCompatActivity implements StepCallBack, OrientCallBack ,LocationCallBack,TemplateCallBack ,StatusCallBack{
     public static ShowInfoActivity showInfoInstance = null;
     //gsp定位服务
     LocationManager location;
@@ -95,9 +97,14 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             Bundle data = null;
             data = msg.getData();
             String show = "";
-            String type = "";
+            String view = "";
             switch (msg.what) {
                 case 1://数据显示
+                    show = (String) data.get("text");
+                    view=(String)data.get("view");
+                    if("locationview".equals(view)) {
+                        locationview.setText(show);
+                    }
                     break;
                 case 2://弹窗
                     break;
@@ -119,8 +126,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             Looper.prepare();//相当于该线程Looper的初始化
             try {
                 while(true) {
-                    if(local!=null){
-                        getSendData(local);
+                    if(local!=null) {
+                        getSendData();
                     }
                     sleep(2000);//wait线程被暂停，需要notify 来释放
                 }
@@ -172,20 +179,20 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
      * 获取需要发送的信息数据 除了速度 坐标 其余都是假数据
      * 数据格式：00006经纬度坐标        |心率|速度|步数 |步频|体温|配速|步幅
      * 例如：    00006117.2323,24.23566|80  |60  |10023|10 |37.6|52  |68
-     * @param location
      */
-    private void getSendData(Location location){
+    private void getSendData(){
+        locationSensor.getLastKnownLocation(local.getProvider());//请求新的数据
         if(!check()){return;}
         lastSend=new StringBuilder();
         int bp=0;
-        if(location !=null){
-            lastSend.append("$00003"+location.getLongitude()+","+location.getLatitude());//经纬度 √
+        if(local !=null){
+            lastSend.append("$00003"+local.getLongitude()+","+local.getLatitude());//经纬度 √
             //安静状态下，成人正常心率为60～100次/分钟，理想心率应为55～70次/分钟（运动员的心率较普通成人偏慢，一般为50次/分钟左右
-            lastSend.append("|"+((int)(location.getSpeed()/6)+60+new Random().nextInt(5)));//心率
-            lastSend.append("|"+location.getSpeed());//速度
+            lastSend.append("|"+((int)(local.getSpeed()/6)+60+new Random().nextInt(5)));//心率
+            lastSend.append("|"+local.getSpeed());//速度
             lastSend.append("|"+count);//步数 √
             lastSend.append("|"+bp);//步频
-            lastSend.append(String.format("|" + (37 + (location.getSpeed() / 600.0))));//体温
+            lastSend.append(String.format("|" + (37 + (local.getSpeed() / 600.0))));//体温
             lastSend.append("|"+52);//配速
             lastSend.append("|"+68);//步幅
         }else{
@@ -217,13 +224,16 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     }
     /**
      * 时间格式转换
+     * 如果是network获取得到的话需要加上东八区
+     * 如果是gps获取得到的数据 不需要加
      * @param time
+     * @param source 源 ,network or gps
      * @return
      */
-    public static String timedate(String time) {
+    public static String timedate(String time,String source) {
         SimpleDateFormat sdr = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         @SuppressWarnings("unused")
-        long lcc = Long.valueOf(time)+8*60*60*1000;//加8个小时 东八区
+        long lcc =Long.valueOf(time);//加8个小时 东八区"network".equals(source)? Long.valueOf(time)+8*60*60*1000:Long.valueOf(time)
         String times = sdr.format(new Date(lcc));
         return times;
     }
@@ -373,7 +383,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         }
 
         //Location定位服务
-        locationSensor=new LocationSensor(this,this);
+        locationSensor=new LocationSensor(this,this,this);
         if (!locationSensor.registerLocation()) {
             locationview.setText("定位服务不可用！");
         }
@@ -382,8 +392,11 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     //  计步回调
     @Override
     public void Step(int stepNum) {
-        step.setText("步数:" + stepNum);
-        count=stepNum;
+        if(local!=null&&local.getSpeed()==0) {
+        }else {
+            step.setText("步数:" + stepNum);
+            count = stepNum;
+        }
     }
     // 方向回调
     @Override
@@ -393,10 +406,21 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     }
     //定位回调
     @Override
-    public void Location(Location local) {
-       locationview.setText("坐标："+local.getLatitude()+","+local.getLongitude()+"\n速度："+local.getSpeed()+"    时间:"+timedate(local.getTime()+""));
-       this.local=local;
-       getSendData(local);
+    public void Location(Location loc) {
+       //locationview.setText("坐标："+local.getLatitude()+","+local.getLongitude()+"\n速度："+local.getSpeed()+"    时间:"+timedate(local.getTime()+"",local.getProvider()));
+        if(loc!=null) {
+            String text = ("提供者："+loc.getProvider()+"\n经度：" +loc.getLongitude()  + "\n纬度：" + loc.getLatitude() + "\n速度：" + loc.getSpeed() + "\n时间:" + timedate(loc.getTime() + "", loc.getProvider())).toString();
+            MyMessage myMessage = new MyMessage(1, "text", text);
+            myMessage.setBundle("view", "locationview");
+            handler.sendMessage(myMessage.getMessage());
+            this.local = loc;
+        }else{
+            this.local=new Location("gps");
+        }
+    }
+    @Override
+    public void Status(List<GpsSatellite> numSatelliteList){
+
     }
     //温度回调
     @Override

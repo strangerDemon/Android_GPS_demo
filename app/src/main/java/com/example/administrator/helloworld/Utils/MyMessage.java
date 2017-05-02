@@ -69,6 +69,7 @@ public class MyMessage {
         this.bundle.putString(title,text);
     }
 
+
     public Message getMessage(){
         message.setData(bundle);
         return this.message;
