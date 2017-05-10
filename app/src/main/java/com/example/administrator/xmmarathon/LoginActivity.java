@@ -147,10 +147,10 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
             new GetServiceData(this, this);
             socket.writeData("$00001" + userId);//少了这个服务器收不到下面的信息
             socket.writeData("$00001" + userId);
-            MyMessage myMessage = new MyMessage(1, "text", "登录中...");
+            MyMessage myMessage = new MyMessage(1, "text", "服务端连接中...");
             handler.sendMessage(myMessage.getMessage());
         } catch (Exception ex) {
-            MyMessage myMessage = new MyMessage(1, "text", "服务器连接失败");
+            MyMessage myMessage = new MyMessage(1, "text", "服务端连接失败");
             handler.sendMessage(myMessage.getMessage());
         }
     }
@@ -203,7 +203,7 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
             intent.setClass(LoginActivity.this, ShowInfoActivity.class);
             LoginActivity.this.startActivity(intent);
         } else if (callback.contains("000010")){
-            MyMessage myMessage = new MyMessage(1, "text", "账号密码有误");
+            MyMessage myMessage = new MyMessage(1, "text", "服务端连接失败");
             handler.sendMessage(myMessage.getMessage());
         }else{
             MyMessage myMessage = new MyMessage(1, "text", callback);

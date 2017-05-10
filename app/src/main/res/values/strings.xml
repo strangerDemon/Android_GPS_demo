@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">demo</string>
+    <string name="app_name">厦门马拉松实时监测</string>
     <!--全局变量-->
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
@@ -17,12 +17,14 @@
     <!--登录页面变量-->
     <string name="login_gameId">比赛编号</string>
     <string name="login_userId">运动员编号</string>
+    <string name="login_password">密码</string>
     <string name="login_button">start</string>
-    <string name="login_title">demo</string>
+    <string name="login_title">厦门马拉松</string>
     <!--展示数据页面-->
     <string name="showinfo_title">传感器数据</string>
     <string name="step">步数：0</string>
     <string name="orient">方向：0</string>
     <string name="location">定位：0,0</string>
     <string name="template">温度：0</string>
+    <string name="status">卫星数：0</string>
 </resources>

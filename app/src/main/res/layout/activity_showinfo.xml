@@ -7,7 +7,7 @@
         <TextView
                 android:id="@+id/showinfo"
                 android:layout_width="match_parent"
-                android:layout_height="150dp"
+                android:layout_height="155dp"
                 android:padding="5dp"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -46,5 +46,5 @@
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_centerHorizontal="true"
-                android:text="wxin"/>
+                android:text="@string/status"/>
 </LinearLayout>
