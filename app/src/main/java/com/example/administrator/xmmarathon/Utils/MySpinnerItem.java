@@ -30,7 +30,7 @@ public class MySpinnerItem {
         this.key = key;
         this.value = value;
     }
-
+    //关键在于这个，spinner显示的时候getString 获取到key
     @Override
     public String toString() {
         return key;

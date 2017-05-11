@@ -132,12 +132,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         public void run() {
             Looper.prepare();//相当于该线程Looper的初始化
             try {
-                while(true) {
-                    if(local!=null/*&&isSend*/) {
+                /*while(true) {
+                    if(local!=null*//*&&isSend*//*) {
                         getSendData();
                     }
                     sleep(1000);//wait线程被暂停，需要notify 来释放
-                }
+                }*/
             } catch (Exception e) {
                 MyMessage myMessage=new MyMessage(1,"text", e.toString());
                 handler.sendMessage(myMessage.getMessage());
@@ -430,6 +430,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             myMessage.setBundle("view", "locationview");
             handler.sendMessage(myMessage.getMessage());
             this.local = loc;
+            getSendData();
         }else{
             this.local=new Location("gps");
         }
