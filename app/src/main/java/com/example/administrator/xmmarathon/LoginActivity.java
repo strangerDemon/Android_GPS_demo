@@ -145,8 +145,8 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
             MySocket socket = new MySocket();
             socket.reCreateSocket();
             new GetServiceData(this, this);
-            socket.writeData("$00001" + userId);//少了这个服务器收不到下面的信息
-            socket.writeData("$00001" + userId);
+            socket.writeData("$00001" + userId+"|"+password+"|"+gameId);//少了这个服务器收不到下面的信息
+            socket.writeData("$00001" + userId+"|"+password+"|"+gameId);
             MyMessage myMessage = new MyMessage(1, "text", "服务端连接中...");
             handler.sendMessage(myMessage.getMessage());
         } catch (Exception ex) {

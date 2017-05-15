@@ -11,7 +11,7 @@ import java.net.Socket;
  */
 public class MySocket {
     private static Socket socket;
-    private static String IP="183.250.160.124";//183.250.160.124,192.168.1.94
+    private static String IP="183.250.160.124";//183.250.160.124,192.168.1.100
     private static int  PORT=8888;
 
     /**

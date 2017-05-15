@@ -117,7 +117,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                     break;
                 case 3://toast
                     show = (String) data.get("text");
-                    if (show != "" || show != null) {
+                    if (show != "" && show != null) {
                         Toast.makeText(ShowInfoActivity.this, show, Toast.LENGTH_SHORT).show();
                     }
                     break;
@@ -154,8 +154,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             MyMessage myMessage=new MyMessage(3,"text", "网络连接失败");
             handler.sendMessage(myMessage.getMessage());
             return false;
-        }
-        if (socket == null) {
+        }else if (socket == null) {
             try {
                 socket = new MySocket();//
                 socket.createSocket();
@@ -164,20 +163,20 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                 handler.sendMessage(myMessage.getMessage());
                 return false;
             }
-        }
-        //获取定位服务，因为是系统的服务，因此不能new出来
-        if (gpsOpenDialog) {
-            isGPSOpen("dialog");
-            gpsOpenDialog = false;
-        } else if (!isGPSOpen("judge")) {
-            MyMessage myMessage=new MyMessage(3,"text", "GPS连接失败");
-            handler.sendMessage(myMessage.getMessage());
-            return false;
-        }
-
-        if (Build.VERSION.SDK_INT >= 23) { //CONTROLLO PER ANDROID 6.0 O SUPERIORE
-            isPermission("dialog");
-        } else {//android 6.0 以下
+        }else if (!isGPSOpen("judge")) {
+            if (gpsOpenDialog) {//获取定位服务，因为是系统的服务，因此不能new出来
+                isGPSOpen("dialog");
+                gpsOpenDialog = false;
+            }else {
+                MyMessage myMessage = new MyMessage(3, "text", "GPS连接失败");
+                handler.sendMessage(myMessage.getMessage());
+                return false;
+            }
+        }else {
+            if (Build.VERSION.SDK_INT >= 23) { //CONTROLLO PER ANDROID 6.0 O SUPERIORE
+                isPermission("dialog");
+            } else {//android 6.0 以下
+            }
         }
         return true;
     }
@@ -203,6 +202,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             lastSend.append(String.format("|" + (37 + (1-10/(10+local.getSpeed())))));//体温
             lastSend.append("|"+1000.0/(local.getSpeed()+1));//配速 你每跑一千米就需要7分30秒的时间。这也就是你的配速7m30s。
             lastSend.append("|"+(68+new Random().nextInt(5)));//步幅
+            lastSend.append("|"+baiduLocation.getTotalTrip());//行程
         }else{
         }
         try {
@@ -425,7 +425,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     public void Location(Location loc, Boolean isChange) {
         isSend=isChange;//从开始监测到gps数据变化开始才向服务器发送数据
         if(loc!=null) {
-            String text = ("提供者："+loc.getProvider()+"\n经度：" +loc.getLongitude()  + "\n纬度：" + loc.getLatitude() + "\n速度：" + loc.getSpeed() + "\n精度："+loc.getAccuracy()+"\n时间:" + timedate(loc.getTime() + "", loc.getProvider())).toString();
+            String text = ("提供者："+loc.getProvider()+"\n经度：" +loc.getLongitude()  + "\n纬度：" + loc.getLatitude() + "\n速度：" + loc.getSpeed() + "\n精度："+loc.getAccuracy()+
+                    "\n行程:"+baiduLocation.getTotalTrip()+"\n时间:" + timedate(loc.getTime() + "", loc.getProvider())).toString();
             MyMessage myMessage = new MyMessage(1, "text", text);
             myMessage.setBundle("view", "locationview");
             handler.sendMessage(myMessage.getMessage());
@@ -439,7 +440,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     public void BaiduLocation(MyLocationData loc, Boolean isChange) {
         isSend=isChange;//从开始监测到gps数据变化开始才向服务器发送数据
         if(loc!=null) {
-            String text = ("提供者：baidu   \n经度：" +loc.longitude  + "\n纬度：" + loc.latitude + "\n速度：" + loc.speed + "\n精度："+loc.accuracy+"\n时间:" + timedate(new Date() + "", "baidu")).toString();
+            String text = ("提供者：baidu   \n经度：" +loc.longitude  + "\n纬度：" + loc.latitude + "\n速度：" + loc.speed + "\n精度："+loc.accuracy+
+                    "\n行程:"+baiduLocation.getTotalTrip()+"\n时间:" + timedate(new Date() + "", "baidu")).toString();
             MyMessage myMessage = new MyMessage(1, "text", text);
             myMessage.setBundle("view", "locationview");
             handler.sendMessage(myMessage.getMessage());
@@ -474,6 +476,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         templateSensor.unregisterTemplate();
         //locationSensor.unregisterLocation();
         baiduLocation.onDestroy();
+
     }
 
     /**
