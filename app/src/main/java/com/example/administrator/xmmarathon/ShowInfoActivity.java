@@ -66,6 +66,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     private LocationSensor locationSensor;//定位
     private BaiduLocation baiduLocation;//baidu location
     private TemplateSensor templateSensor;//温度
+
     //关闭线程
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -199,8 +200,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             lastSend.append("|"+local.getSpeed());//速度
             lastSend.append("|"+count);//步数 √
             lastSend.append("|"+5*(int)(1-10/(10+local.getSpeed())));//步频竞走步频可达3.5—3.7步/秒；短跑步频可达4.6—5.1步/秒
-            lastSend.append(String.format("|" + (37 + (1-10/(10+local.getSpeed())))));//体温
-            lastSend.append("|"+1000.0/(local.getSpeed()+1));//配速 你每跑一千米就需要7分30秒的时间。这也就是你的配速7m30s。
+            lastSend.append(String.format("|" + (37 + ((int)100*(1-10/(10+local.getSpeed())))/100)));//体温
+            lastSend.append("|"+(int)(1000.0/(local.getSpeed()+1)));//配速 你每跑一千米就需要7分30秒的时间。这也就是你的配速7m30s。
             lastSend.append("|"+(68+new Random().nextInt(5)));//步幅
             lastSend.append("|"+baiduLocation.getTotalTrip());//行程
         }else{
@@ -211,23 +212,37 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             MyMessage myMessage=new MyMessage(3,"text", "发送数据失败");
             handler.sendMessage(myMessage.getMessage());
             /**
-             *  关闭之前的socket 重新创建socket
+             *  关闭之前的socket 重新创建socket 重新登录 这里有网络，主线程是不能有网络访问的
              */
-            reLogin();
+            new reLoginThread().start();
         }
     }
     /**
-     *  重新登录
+     *
      *  关闭之前的socket 重新创建socket
      */
-    public void reLogin(){
+    public boolean reLogin(){
         try {
             socket.reCreateSocket();
-            socket.writeData("null");//少了这个服务器可能收不到下面的信息
+            socket.writeData("$00001" + LoginActivity.getUserId());//少了这个服务器可能收不到下面的信息
             socket.writeData("$00001" + LoginActivity.getUserId());
+            return true;
         }catch(Exception ex){
             MyMessage myMessage=new MyMessage(3,"text", "重新连接服务器失败");
             handler.sendMessage(myMessage.getMessage());
+            return false;
+        }
+    }
+
+    class reLoginThread extends Thread implements Runnable {
+        public void run() {
+           while(!reLogin()){
+               try {
+                   sleep(1000);
+               }catch(Exception ex){
+
+               }
+           }
         }
     }
     /**

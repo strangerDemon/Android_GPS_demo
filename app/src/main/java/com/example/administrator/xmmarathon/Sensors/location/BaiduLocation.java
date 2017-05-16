@@ -5,7 +5,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import java.math.*;
 
 import android.location.Location;
 import com.baidu.location.BDLocation;
@@ -171,7 +170,7 @@ public class BaiduLocation implements SensorEventListener{
         double s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(a/2),2) +
                     Math.cos(radLat1)*Math.cos(radLat2)*Math.pow(Math.sin(b/2),2)));
         s = s * EARTH_RADIUS;
-        s = Math.round(s * 10000) / 10000;
+        s = (Math.round(s * 100)/10)/10.0;//保存2位小数
         return s;
     }
     private double rad(double d)
