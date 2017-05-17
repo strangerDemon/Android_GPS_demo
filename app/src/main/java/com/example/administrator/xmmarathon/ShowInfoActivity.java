@@ -15,9 +15,11 @@ import android.os.*;
 import android.provider.Settings;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Window;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.baidu.mapapi.map.MyLocationData;
+import com.example.administrator.xmmarathon.Datas.Grobal;
 import com.example.administrator.xmmarathon.Sensors.location.BaiduLocation;
 import com.example.administrator.xmmarathon.Sensors.location.LocationCallBack;
 import com.example.administrator.xmmarathon.Sensors.location.LocationSensor;
@@ -71,6 +73,9 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //初始化
+        count= Grobal.user.getStepNum();
+        //page
         setContentView(R.layout.activity_showinfo);
         step = (TextView) findViewById(R.id.step);
         orient = (TextView) findViewById(R.id.orient);
@@ -80,8 +85,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
 
         initShow();
         showInterstitial();
-        thread=new beginThread();
-        thread.start();
+        //thread=new beginThread();
+        //thread.start();
         showInfoInstance=this;
     }
 

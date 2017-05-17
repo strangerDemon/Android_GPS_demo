@@ -12,6 +12,8 @@ import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.map.*;
+import com.example.administrator.xmmarathon.Datas.Grobal;
+
 /**
  * 此demo用来展示如何结合定位SDK实现定位，
  */
@@ -36,7 +38,7 @@ public class BaiduLocation implements SensorEventListener{
     Location loca;
 
     //计算走了多少米 5s前的数据
-    private static double totalTrip=0;//行程
+    public static double totalTrip=0;//行程
     private int loopTime=5;//多少秒执行一次
     private static double lastLat;//上一次计算的经度
     private static double lastLng;//上一次计算的纬度
@@ -51,7 +53,8 @@ public class BaiduLocation implements SensorEventListener{
 
         positionUtil=new PositionUtil();
         loca=new Location("gps");
-
+        //数据初始化
+        totalTrip= Grobal.user.getDistance();
         // 定位初始化
         mLocClient = new LocationClient(context);
         mLocClient.registerLocationListener(myListener);

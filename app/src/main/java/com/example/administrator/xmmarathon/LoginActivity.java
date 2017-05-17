@@ -10,6 +10,9 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.*;
 import android.content.Intent;
+import com.example.administrator.xmmarathon.Datas.Grobal;
+import com.example.administrator.xmmarathon.Models.User;
+import com.example.administrator.xmmarathon.Sensors.location.BaiduLocation;
 import com.example.administrator.xmmarathon.Utils.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -135,20 +138,27 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
             //接口校验用户信息
             String loginCheck=GetApiData.postDownloadJson("/loginVerification","'mlsCode':'"+gameId+"','userCode':'"+userId+"','pwd':'"+password+"'");
             JSONObject jsonObject=new JSONObject(loginCheck);//{"Results":null,"RespDesc":"失败","RespCode":0};{"Results":null,"RespDesc":"成功","RespCode":1}
-            if(!jsonObject.getString("RespCode").equals("1")){//登录失败
+            if(jsonObject.getString("RespCode").equals("1")){//登录失败
+                //保存用户信息
+                Grobal.user=new User().JsonTOUser(jsonObject.getString("Results"));
+                //提醒
+                MyMessage myMessage = new MyMessage(1, "text", Grobal.user.getName()+"欢迎使用");
+                handler.sendMessage(myMessage.getMessage());
+                //连接数据接收端
+                MySocket socket = new MySocket();
+                socket.reCreateSocket();
+                new GetServiceData(this, this);
+                socket.writeData("$00001" + userId+"|"+password+"|"+gameId);//少了这个服务器收不到下面的信息
+                socket.writeData("$00001" + userId+"|"+password+"|"+gameId);
+                myMessage = new MyMessage(1, "text", "服务端连接中...");
+                handler.sendMessage(myMessage.getMessage());
+            }else if(jsonObject.getString("RespCode").equals("0")){//登录失败
                 MyMessage myMessage = new MyMessage(1, "text", "登录失败，请校验账号密码");
                 handler.sendMessage(myMessage.getMessage());
-                return;
+            }else {//还要加一个赛事结束
+                MyMessage myMessage = new MyMessage(1, "text", "赛事已结束！");
+                handler.sendMessage(myMessage.getMessage());
             }
-            //jsonObject.getString();
-            //连接数据接收端
-            MySocket socket = new MySocket();
-            socket.reCreateSocket();
-            new GetServiceData(this, this);
-            socket.writeData("$00001" + userId+"|"+password+"|"+gameId);//少了这个服务器收不到下面的信息
-            socket.writeData("$00001" + userId+"|"+password+"|"+gameId);
-            MyMessage myMessage = new MyMessage(1, "text", "服务端连接中...");
-            handler.sendMessage(myMessage.getMessage());
         } catch (Exception ex) {
             MyMessage myMessage = new MyMessage(1, "text", "服务端连接失败");
             handler.sendMessage(myMessage.getMessage());
