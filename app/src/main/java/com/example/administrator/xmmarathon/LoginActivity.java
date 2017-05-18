@@ -138,9 +138,11 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
             //接口校验用户信息
             String loginCheck=GetApiData.postDownloadJson("/loginVerification","'mlsCode':'"+gameId+"','userCode':'"+userId+"','pwd':'"+password+"'");
             JSONObject jsonObject=new JSONObject(loginCheck);//{"Results":null,"RespDesc":"失败","RespCode":0};{"Results":null,"RespDesc":"成功","RespCode":1}
-            if(jsonObject.getString("RespCode").equals("1")){//登录失败
+            if(jsonObject.getString("RespCode").equals("1")){//登录成功
                 //保存用户信息
-                Grobal.user=new User().JsonTOUser(jsonObject.getString("Results"));
+                String mlsData=GetApiData.postDownloadJson("/getUserLastMlsData","'userCode':'"+userId+"'");
+                JSONObject MlsObject=new JSONObject(mlsData);
+                Grobal.user=new User().JsonTOUser(jsonObject.getString("Results"),MlsObject.getString("Results"));
                 //提醒
                 MyMessage myMessage = new MyMessage(1, "text", Grobal.user.getName()+"欢迎使用");
                 handler.sendMessage(myMessage.getMessage());

@@ -496,7 +496,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         templateSensor.unregisterTemplate();
         //locationSensor.unregisterLocation();
         baiduLocation.onDestroy();
-
     }
 
     /**
