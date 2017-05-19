@@ -142,7 +142,7 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
                 //保存用户信息
                 String mlsData=GetApiData.postDownloadJson("/getUserLastMlsData","'userCode':'"+userId+"'");
                 JSONObject MlsObject=new JSONObject(mlsData);
-                Grobal.user=new User().JsonTOUser(jsonObject.getString("Results"),MlsObject.getString("Results"));
+                Grobal.user=new User(jsonObject.getString("Results"),MlsObject.getString("Results"));
                 //提醒
                 MyMessage myMessage = new MyMessage(1, "text", Grobal.user.getName()+"欢迎使用");
                 handler.sendMessage(myMessage.getMessage());

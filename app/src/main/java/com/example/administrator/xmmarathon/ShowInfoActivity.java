@@ -29,6 +29,7 @@ import com.example.administrator.xmmarathon.Sensors.orient.OrientSensor;
 import com.example.administrator.xmmarathon.Sensors.step.*;
 import com.example.administrator.xmmarathon.Sensors.template.TemplateCallBack;
 import com.example.administrator.xmmarathon.Sensors.template.TemplateSensor;
+import com.example.administrator.xmmarathon.Utils.FileAction;
 import com.example.administrator.xmmarathon.Utils.MyMessage;
 import com.example.administrator.xmmarathon.Utils.MySocket;
 
@@ -69,6 +70,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     private BaiduLocation baiduLocation;//baidu location
     private TemplateSensor templateSensor;//温度
 
+    //文件操作
+    private FileAction fileAction;
     //关闭线程
     @Override
     protected void onCreate(Bundle savedInstanceState) {
