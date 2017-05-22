@@ -7,7 +7,7 @@ import android.content.Context;
  * Created by Administrator on 2017/4/26.
  */
 public class GetServiceData {
-    private static final String TAG = "LocationSensor";
+    private static final String TAG = "GetService";
     private static ServiceThread serviceThread;
     MySocket mySocket;
     GetServiceDataCallBack getServiceDataCallBack;

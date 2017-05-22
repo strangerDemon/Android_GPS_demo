@@ -1,5 +1,6 @@
 package com.example.administrator.xmmls;
 
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -12,7 +13,6 @@ import android.widget.*;
 import android.content.Intent;
 import com.example.administrator.xmmls.Datas.Grobal;
 import com.example.administrator.xmmls.Models.User;
-import com.example.administrator.xmmls.Sensors.location.BaiduLocation;
 import com.example.administrator.xmmls.Utils.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -143,6 +143,14 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
                 String mlsData=GetApiData.postDownloadJson("/getUserLastMlsData","'userCode':'"+userId+"'");
                 JSONObject MlsObject=new JSONObject(mlsData);
                 Grobal.user=new User(jsonObject.getString("Results"),MlsObject.getString("Results"));
+                Grobal.UserId=userId;
+                Grobal.GameId=gameId;
+                try {
+                    Grobal.sqLiteAction = new SQLiteAction(this, "mlsData.db", null, 1);
+                    Grobal.sqLiteAction.onCreate(Grobal.sqLiteAction.getWritableDatabase());
+                }catch(Exception ex){
+                    ex.toString();
+                }
                 //提醒
                 MyMessage myMessage = new MyMessage(1, "text", Grobal.user.getName()+"欢迎使用");
                 handler.sendMessage(myMessage.getMessage());
@@ -209,15 +217,19 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
     //callback
     @Override
     public void ServiceData(String callback) {
-        if (callback.contains("000011")  && !isOpenMain) {
+        if (callback.contains("000011") && !isOpenMain) {
             isOpenMain = true;
             Intent intent = new Intent();
             intent.setClass(LoginActivity.this, ShowInfoActivity.class);
             LoginActivity.this.startActivity(intent);
-        } else if (callback.contains("000010")){
+        } else if (callback.contains("000010")) {
             MyMessage myMessage = new MyMessage(1, "text", "服务端连接失败");
             handler.sendMessage(myMessage.getMessage());
-        }else{
+        } else if (callback.equals("unSend")) {
+            Grobal.isSend = false;
+        } else if (callback.equals("send")) {
+            Grobal.isSend = true;
+        } else {
             MyMessage myMessage = new MyMessage(1, "text", callback);
             handler.sendMessage(myMessage.getMessage());
             if(callback.contains("ServerOff")){

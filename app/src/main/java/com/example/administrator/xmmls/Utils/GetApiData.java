@@ -1,5 +1,7 @@
 package com.example.administrator.xmmls.Utils;
 
+import com.example.administrator.xmmls.Datas.Grobal;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -12,10 +14,6 @@ import java.net.URLEncoder;
  * Created by Administrator on 2017/5/9.
  */
 public class GetApiData {
-    //验证码
-    private static String token="dGltZT0xNDc5Mzg1NjgyMzY0Jm51bT1TUTZJMyZhY2Nlc3NUb2tlbj10cFJBQ0dqOTdPSk1nZG5MUlllTVQzSVRoL090RDB6SSZ2ZXJzaW9uPXYxLjAmYXBwSWQ9aW5pdCZwbGF0Zm9ybT1hbmRyb2lkJnBob25lVVVJRD01YjJkMjk1MzNkNmY0MzM2OGExNzJhNmRhMjk3ZGE1ZA==";
-    //地址
-    private  static String address="http://www.ztgis.com:8883/xmtdt.asmx";
     /**
      * get
      * 从网络获取json数据,(String byte[})
@@ -52,8 +50,8 @@ public class GetApiData {
      * POST请求获取数据
      */
     public static String postDownloadJson(String path,String post){
-        path=address+path;
-        post=post==""?"para={'Token': '" + token+"'}":"para={'Token': '" + token + "',"+post+"}";
+        path=Grobal.address+path;
+        post=post==""?"para={'Token': '" + Grobal.token+"'}":"para={'Token': '" + Grobal.token + "',"+post+"}";
         URL url = null;
         try {
             url = new URL(path);

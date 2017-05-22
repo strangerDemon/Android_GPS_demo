@@ -20,6 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import com.baidu.mapapi.map.MyLocationData;
 import com.example.administrator.xmmls.Datas.Grobal;
+import com.example.administrator.xmmls.Models.MLSDATA;
 import com.example.administrator.xmmls.Sensors.location.BaiduLocation;
 import com.example.administrator.xmmls.Sensors.location.LocationCallBack;
 import com.example.administrator.xmmls.Sensors.location.LocationSensor;
@@ -70,6 +71,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     private BaiduLocation baiduLocation;//baidu location
     private TemplateSensor templateSensor;//温度
 
+    private Toast myToast;//toast
     //文件操作
     private FileAction fileAction;
     //关闭线程
@@ -127,7 +129,8 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                 case 3://toast
                     show = (String) data.get("text");
                     if (show != "" && show != null) {
-                        Toast.makeText(ShowInfoActivity.this, show, Toast.LENGTH_SHORT).show();
+                        myToast=Toast.makeText(ShowInfoActivity.this, show, Toast.LENGTH_SHORT);
+                        myToast.show();
                     }
                     break;
             }
@@ -202,27 +205,35 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         if(!check()){return;}
         lastSend=new StringBuilder();
         if(local !=null){
-            lastSend.append("$00003"+local.getLongitude()+","+local.getLatitude());//经纬度 √
             //安静状态下，成人正常心率为60～100次/分钟，理想心率应为55～70次/分钟（运动员的心率较普通成人偏慢，一般为50次/分钟左右
-            lastSend.append("|"+(40*(int)(1-10/(10+local.getSpeed()))+60+new Random().nextInt(3)));//心率
-            lastSend.append("|"+local.getSpeed());//速度
-            lastSend.append("|"+count);//步数 √
-            lastSend.append("|"+5*(int)(1-10/(10+local.getSpeed())));//步频竞走步频可达3.5—3.7步/秒；短跑步频可达4.6—5.1步/秒
-            lastSend.append(String.format("|" + (37 + ((int)100*(1-10/(10+local.getSpeed())))/100)));//体温
-            lastSend.append("|"+(int)(1000.0/(local.getSpeed()+1)));//配速 你每跑一千米就需要7分30秒的时间。这也就是你的配速7m30s。
-            lastSend.append("|"+(68+new Random().nextInt(5)));//步幅
-            lastSend.append("|"+baiduLocation.getTotalTrip());//行程
+            int heartRate=40*(int)(1-10/(10+local.getSpeed()))+60+new Random().nextInt(3);
+            double temperature=37 + ((int)100*(1-10/(10+local.getSpeed())))/100;
+            int pace=(int)(1000.0/(local.getSpeed()+1));
+            int stride=68+new Random().nextInt(5);
+            if(Grobal.isSend) {
+                lastSend.append("$00003"+local.getLongitude()+","+local.getLatitude());//经纬度 √
+                lastSend.append("|" + heartRate);//心率
+                lastSend.append("|" + local.getSpeed());//速度
+                lastSend.append("|" + count);//步数 √
+                lastSend.append("|" + 5 * (int) (1 - 10 / (10 + local.getSpeed())));//步频竞走步频可达3.5—3.7步/秒；短跑步频可达4.6—5.1步/秒
+                lastSend.append(String.format("|" + temperature));//体温
+                lastSend.append("|" + pace);//配速 你每跑一千米就需要7分30秒的时间。这也就是你的配速7m30s。
+                lastSend.append("|" + stride);//步幅
+                lastSend.append("|" + baiduLocation.getTotalTrip());//行程
+                try {
+                    socket.writeData(lastSend.toString());
+                }catch(Exception ex){
+                    MyMessage myMessage=new MyMessage(3,"text", "发送数据失败");
+                    handler.sendMessage(myMessage.getMessage());
+                    /**
+                     *  关闭之前的socket 重新创建socket 重新登录 这里有网络，主线程是不能有网络访问的
+                     */
+                    new reLoginThread().start();
+                }
+            }
+            MLSDATA mlsdata=new MLSDATA(Grobal.UserId,local.getLongitude()+"", local.getLatitude()+"",heartRate,local.getSpeed(), count,temperature, pace, stride, new Date());
+            Grobal.sqLiteAction.save(mlsdata);
         }else{
-        }
-        try {
-            socket.writeData(lastSend.toString());
-        }catch(Exception ex){
-            MyMessage myMessage=new MyMessage(3,"text", "发送数据失败");
-            handler.sendMessage(myMessage.getMessage());
-            /**
-             *  关闭之前的socket 重新创建socket 重新登录 这里有网络，主线程是不能有网络访问的
-             */
-            new reLoginThread().start();
         }
     }
     /**
@@ -499,6 +510,9 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         templateSensor.unregisterTemplate();
         //locationSensor.unregisterLocation();
         baiduLocation.onDestroy();
+        if(myToast!=null) {
+            myToast.cancel();
+        }
     }
 
     /**
