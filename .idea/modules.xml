@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/XmMarathon.iml" filepath="$PROJECT_DIR$/XmMarathon.iml" />
+      <module fileurl="file://$PROJECT_DIR$/XmMLS.iml" filepath="$PROJECT_DIR$/XmMLS.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
