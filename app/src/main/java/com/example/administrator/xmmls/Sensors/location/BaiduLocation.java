@@ -13,11 +13,12 @@ import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.map.*;
 import com.example.administrator.xmmls.Datas.Grobal;
+import com.example.administrator.xmmls.Models.Gps;
 
 /**
  * 此demo用来展示如何结合定位SDK实现定位，
  */
-public class BaiduLocation implements SensorEventListener{
+public class  BaiduLocation implements SensorEventListener{
 
     // 定位相关
     LocationClient mLocClient;
@@ -114,12 +115,14 @@ public class BaiduLocation implements SensorEventListener{
                 lastLng=loca.getLongitude();
             }
             gps=positionUtil.gcj_To_Gps84(locData.latitude,locData.longitude);
-            //数据过滤，和上一个数据差距过大，去掉
+
+            //数据过滤
             if(isUnUsed(gps.getWgLat(),gps.getWgLon(),loca.getLatitude(),loca.getLongitude())){
                 count++;
-                length*=count;
+                length=Grobal.LENGTH*count;
                 return;
             }
+            length=Grobal.LENGTH;
             loca.setLatitude(gps.getWgLat());
             loca.setLongitude(gps.getWgLon());
             loca.setSpeed((float)countTrip(loca.getLatitude(),loca.getLongitude(),lastLat,lastLng)/5);
@@ -182,10 +185,13 @@ public class BaiduLocation implements SensorEventListener{
     }
 
     /**
-     * 时候是废数据
+     * 判断是否是废数据
      */
     private boolean isUnUsed(double nowLat,double nowLng,double lastLat,double lastLng){
-        if(countTrip(nowLat,nowLng,lastLat,lastLng)>length){
+        if(nowLat>Grobal.MAX_XM_LAT||nowLat<Grobal.MIN_XM_LAT||nowLng>Grobal.MAX_XM_LNG||nowLng<Grobal.MIN_XM_LNG){//不在厦门的范围内（粗略）
+            return true;
+        }
+        if(countTrip(nowLat,nowLng,lastLat,lastLng)>length){//和上一个对比差距过大
             return true;
         }
         return false;

@@ -1,6 +1,5 @@
 package com.example.administrator.xmmls;
 
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -131,7 +130,7 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
      * 校验数据库时候有对应的比赛编号和用户
      * @param userId
      * @param gameId
-     * @return
+     * @param password
      */
     private void checkUser(String userId, String gameId,String password) {
         try {
@@ -149,7 +148,9 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
                     Grobal.sqLiteAction = new SQLiteAction(this, "mlsData.db", null, 1);
                     Grobal.sqLiteAction.onCreate(Grobal.sqLiteAction.getWritableDatabase());
                 }catch(Exception ex){
-                    ex.toString();
+                    MyMessage myMessage = new MyMessage(1, "text", "初始化异常"+ex.toString());
+                    handler.sendMessage(myMessage.getMessage());
+                    return;
                 }
                 //提醒
                 MyMessage myMessage = new MyMessage(1, "text", Grobal.user.getName()+"欢迎使用");
@@ -158,7 +159,7 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
                 MySocket socket = new MySocket();
                 socket.reCreateSocket();
                 new GetServiceData(this, this);
-                socket.writeData("$00001" + userId+"|"+password+"|"+gameId);//少了这个服务器收不到下面的信息
+                socket.writeData("$00001" + userId+"|"+password+"|"+gameId);//少了这个服务器可能收不到下面的信息
                 socket.writeData("$00001" + userId+"|"+password+"|"+gameId);
                 myMessage = new MyMessage(1, "text", "服务端连接中...");
                 handler.sendMessage(myMessage.getMessage());
@@ -206,13 +207,6 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
             }
         }
     }
-    //setting getting
-    public static String getUserId(){
-        return userId;
-    }
-    public static String getGameId(){
-        return gameId;
-    }
 
     //callback
     @Override
@@ -225,17 +219,18 @@ public class LoginActivity extends AppCompatActivity implements GetServiceDataCa
         } else if (callback.contains("000010")) {
             MyMessage myMessage = new MyMessage(1, "text", "服务端连接失败");
             handler.sendMessage(myMessage.getMessage());
-        } else if (callback.equals("unSend")) {
+        }
+      /*  else if (callback.equals("unSend")) {
             Grobal.isSend = false;
         } else if (callback.equals("send")) {
             Grobal.isSend = true;
-        } else {
+        } */
+        else {
             MyMessage myMessage = new MyMessage(1, "text", callback);
             handler.sendMessage(myMessage.getMessage());
             if(callback.contains("ServerOff")){
                 isOpenMain=false;
                 ShowInfoActivity.showInfoInstance.finish();//类似于单例模式 关闭页面
-                ShowInfoActivity.showInfoInstance.handler.removeCallbacks(ShowInfoActivity.showInfoInstance.thread);//关闭线程
                 ShowInfoActivity.showInfoInstance.local=null;
             }
         }

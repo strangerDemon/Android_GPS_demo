@@ -1,4 +1,4 @@
-package com.example.administrator.xmmls.Sensors.location;
+package com.example.administrator.xmmls.Models;
 
 /**
  * Created by Administrator on 2017/5/9.

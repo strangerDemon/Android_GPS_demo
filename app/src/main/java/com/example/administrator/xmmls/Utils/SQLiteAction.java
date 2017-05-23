@@ -110,19 +110,26 @@ public class SQLiteAction extends SQLiteOpenHelper {
      */
     public List<MLSDATA> getScrollData(int offset, int maxResult)
     {
-        List<MLSDATA> person = new ArrayList<MLSDATA>();
+        List<MLSDATA> MlsDataList = new ArrayList<MLSDATA>();
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor cursor =  db.rawQuery("SELECT * FROM MLSData ORDER BY GetTime DESC LIMIT= ?,?",
+        Cursor cursor =  db.rawQuery("SELECT * FROM MLSData ORDER BY GetTime DESC LIMIT ?,?",
                 new String[]{String.valueOf(offset),String.valueOf(maxResult)});
         while(cursor.moveToNext())
         {
-            /*int personid = cursor.getInt(cursor.getColumnIndex("personid"));
-            String name = cursor.getString(cursor.getColumnIndex("name"));
-            String phone = cursor.getString(cursor.getColumnIndex("phone"));
-            person.add(new MLSDATA(personid,name,phone)) ;*/
+            String UserId = cursor.getString(cursor.getColumnIndex("UserId"));
+            String Log = cursor.getString(cursor.getColumnIndex("Log"));
+            String Lat = cursor.getString(cursor.getColumnIndex("Lat"));
+            int HeartRate = cursor.getInt(cursor.getColumnIndex("HeartRate"));
+            double Speed = cursor.getDouble(cursor.getColumnIndex("Speed"));
+            int StepNum = cursor.getInt(cursor.getColumnIndex("StepNum"));
+            int Temperature = cursor.getInt(cursor.getColumnIndex("Temperature"));
+            int Pace = cursor.getInt(cursor.getColumnIndex("Pace"));
+            int Stride = cursor.getInt(cursor.getColumnIndex("Stride"));
+            String GetTime = cursor.getString(cursor.getColumnIndex("GetTime"));
+            MlsDataList.add(new MLSDATA(UserId,Log,Lat,HeartRate,Speed,StepNum,Temperature,Pace,Stride,new Date(GetTime))) ;
         }
         cursor.close();
-        return person;
+        return MlsDataList;
     }
 
     /**

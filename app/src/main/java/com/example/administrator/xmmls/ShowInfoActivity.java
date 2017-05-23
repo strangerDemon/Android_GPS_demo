@@ -54,8 +54,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     public static int orientNum=0;//方向
     //网络socket
     public static MySocket socket;//
-    //线程
-    beginThread thread;
     //dialog提醒一次
     public boolean gpsOpenDialog=true;
     //计步器
@@ -70,10 +68,10 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     private LocationSensor locationSensor;//定位
     private BaiduLocation baiduLocation;//baidu location
     private TemplateSensor templateSensor;//温度
-
-    private Toast myToast;//toast
     //文件操作
     private FileAction fileAction;
+    //是否展示toast
+    private boolean isToast=true;
     //关闭线程
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,8 +88,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
 
         initShow();
         showInterstitial();
-        //thread=new beginThread();
-        //thread.start();
         showInfoInstance=this;
     }
 
@@ -128,35 +124,14 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                     break;
                 case 3://toast
                     show = (String) data.get("text");
-                    if (show != "" && show != null) {
-                        myToast=Toast.makeText(ShowInfoActivity.this, show, Toast.LENGTH_SHORT);
-                        myToast.show();
+                    if (show != "" && show != null&&isToast) {
+                        Toast.makeText(ShowInfoActivity.this, show, Toast.LENGTH_SHORT).show();
                     }
                     break;
             }
             super.handleMessage(msg);
         }
     };
-    /**
-     * 自定义线程操作
-     */
-   class beginThread extends Thread implements Runnable {
-        public void run() {
-            Looper.prepare();//相当于该线程Looper的初始化
-            try {
-                /*while(true) {
-                    if(local!=null*//*&&isSend*//*) {
-                        getSendData();
-                    }
-                    sleep(1000);//wait线程被暂停，需要notify 来释放
-                }*/
-            } catch (Exception e) {
-                MyMessage myMessage=new MyMessage(1,"text", e.toString());
-                handler.sendMessage(myMessage.getMessage());
-            }
-            Looper.loop();//Looper开始执行，注意该语句执行后，这个线程的其他操作就被阻塞，只能响应事件了。
-        }
-    }
     /**
      * 判断是否有连接网络，gps，权限
      */
@@ -202,7 +177,12 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     private void getSendData(){
         //locationSensor.getLastKnownLocation();//请求新的数据
         //baiduLocation.getLastKnownLocation();
-        if(!check()){return;}
+        if (!check()) {
+            isToast = false;
+            return;
+        } else {
+            isToast = true;
+        }
         lastSend=new StringBuilder();
         if(local !=null){
             //安静状态下，成人正常心率为60～100次/分钟，理想心率应为55～70次/分钟（运动员的心率较普通成人偏慢，一般为50次/分钟左右
@@ -210,7 +190,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
             double temperature=37 + ((int)100*(1-10/(10+local.getSpeed())))/100;
             int pace=(int)(1000.0/(local.getSpeed()+1));
             int stride=68+new Random().nextInt(5);
-            if(Grobal.isSend) {
+            //if(Grobal.isSend) {
                 lastSend.append("$00003"+local.getLongitude()+","+local.getLatitude());//经纬度 √
                 lastSend.append("|" + heartRate);//心率
                 lastSend.append("|" + local.getSpeed());//速度
@@ -230,9 +210,11 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                      */
                     new reLoginThread().start();
                 }
-            }
+            // }
+            //保存到手机本地
             MLSDATA mlsdata=new MLSDATA(Grobal.UserId,local.getLongitude()+"", local.getLatitude()+"",heartRate,local.getSpeed(), count,temperature, pace, stride, new Date());
             Grobal.sqLiteAction.save(mlsdata);
+            //Grobal.sqLiteAction.getScrollData(0,10); //test the data is save or not
         }else{
         }
     }
@@ -243,12 +225,13 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
     public boolean reLogin(){
         try {
             socket.reCreateSocket();
-            socket.writeData("$00001" + LoginActivity.getUserId());//少了这个服务器可能收不到下面的信息
-            socket.writeData("$00001" + LoginActivity.getUserId());
+            socket.writeData("$00001" + Grobal.UserId);
+            isToast = true;
             return true;
         }catch(Exception ex){
             MyMessage myMessage=new MyMessage(3,"text", "重新连接服务器失败");
             handler.sendMessage(myMessage.getMessage());
+            isToast = false;
             return false;
         }
     }
@@ -388,7 +371,6 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
                 }
                 LoginActivity.isOpenMain=false;
                 local=null;
-                handler.removeCallbacks(thread);
                 finish();
             }
         });
@@ -510,9 +492,7 @@ public class ShowInfoActivity extends AppCompatActivity implements StepCallBack,
         templateSensor.unregisterTemplate();
         //locationSensor.unregisterLocation();
         baiduLocation.onDestroy();
-        if(myToast!=null) {
-            myToast.cancel();
-        }
+        Grobal.sqLiteAction.close();
     }
 
     /**

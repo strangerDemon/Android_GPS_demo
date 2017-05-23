@@ -50,8 +50,8 @@ public class GetApiData {
      * POST请求获取数据
      */
     public static String postDownloadJson(String path,String post){
-        path=Grobal.address+path;
-        post=post==""?"para={'Token': '" + Grobal.token+"'}":"para={'Token': '" + Grobal.token + "',"+post+"}";
+        path=Grobal.ADDRESS+path;
+        post=post==""?"para={'Token': '" + Grobal.TOKEN+"'}":"para={'Token': '" + Grobal.TOKEN + "',"+post+"}";
         URL url = null;
         try {
             url = new URL(path);
